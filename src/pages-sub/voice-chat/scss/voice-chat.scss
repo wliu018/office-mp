@@ -1,0 +1,178 @@
+.voice-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--window-top));
+  padding-top: var(--window-top);
+
+  .chat-scroll-view {
+    flex: 1;
+    padding: 20rpx;
+    overflow: hidden;
+  }
+
+  .chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 24rpx;
+    padding-bottom: 20rpx;
+  }
+
+  .message-item {
+    display: flex;
+    width: 80%;
+
+    &.user-message {
+      justify-content: flex-end;
+      align-self: flex-end;
+
+      .message-bubble {
+        width: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        border-radius: 24rpx 24rpx 8rpx 24rpx;
+      }
+    }
+
+    &.assistant-message {
+      justify-content: flex-start;
+      align-self: flex-start;
+
+      .message-bubble {
+        background: #fff;
+        color: #333;
+        border-radius: 24rpx 24rpx 24rpx 8rpx;
+        box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+      }
+    }
+  }
+
+  .message-bubble {
+    padding: 20rpx 24rpx;
+    min-width: 60rpx;
+
+    .message-content {
+      font-size: 32rpx;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .message-time {
+      font-size: 24rpx;
+      // color: rgba(255, 255, 255, 0.7);
+      margin-top: 8rpx;
+      text-align: right;
+    }
+
+    &.recognizing,
+    &.waiting {
+      display: flex;
+      align-items: center;
+      background: #fff;
+      color: #999;
+
+      :deep(.wd-icon) {
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .recording-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24rpx 0;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 16rpx;
+    margin: 0 40rpx 20rpx;
+
+    .recording-animation {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8rpx;
+      height: 64rpx;
+
+      .wave-bar {
+        width: 8rpx;
+        background: #fff;
+        border-radius: 4rpx;
+        transition: height 0.15s ease;
+      }
+    }
+
+    .recording-text {
+      color: #fff;
+      font-size: 28rpx;
+      margin-top: 16rpx;
+    }
+
+    .recording-duration {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 24rpx;
+      margin-top: 8rpx;
+    }
+  }
+
+  .mic-button-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48rpx 0;
+    padding-bottom: calc(48rpx + env(safe-area-inset-bottom) + 40px);
+    background: #fff;
+    border-top: 1rpx solid rgba(0, 0, 0, 0.05);
+
+    .mic-button {
+      width: 140rpx;
+      height: 140rpx;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #e6e6e6, #ffffff);
+      box-shadow:
+        8rpx 8rpx 16rpx rgba(0, 0, 0, 0.1),
+        -8rpx -8rpx 16rpx rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+
+      &:active,
+      &.recording {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        transform: scale(0.95);
+        box-shadow: 4rpx 4rpx 8rpx rgba(102, 126, 234, 0.4);
+      }
+    }
+
+    .mic-hint {
+      font-size: 28rpx;
+      color: #999;
+      margin-top: 24rpx;
+    }
+  }
+}
+
+.input-dialog {
+  padding: 32rpx;
+
+  .input-dialog-title {
+    font-size: 32rpx;
+    font-weight: 500;
+    color: #333;
+    text-align: center;
+  }
+
+  .input-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 20rpx;
+  }
+}

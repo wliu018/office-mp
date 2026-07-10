@@ -1,0 +1,121 @@
+.container {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  .item {
+    margin-bottom: 15px;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    .title {
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+    .section {
+      .row1 {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        margin-bottom: 20px;
+        gap: 5px;
+        .label {
+          color: #333;
+          display: flex;
+          align-items: center;
+          font-size: 14px;
+        }
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin-bottom: 20px;
+        .label {
+          color: #333;
+          display: flex;
+          align-items: center;
+          font-size: 14px;
+        }
+        .content1 {
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+        }
+        .unit {
+          padding-left: 10px;
+          color: #333;
+        }
+      }
+    }
+  }
+}
+.time-select-page {
+  box-sizing: border-box;
+}
+
+.page-header {
+  margin-bottom: 30rpx;
+}
+
+.page-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.selected-result {
+  background-color: #fff6c8;
+  padding: 10px 3px;
+  color: #f0883a;
+  font-size: 28rpx;
+  line-height: 28rpx;
+  display: flex;
+  align-items: center;
+}
+
+.result-label {
+  font-size: 24rpx;
+}
+
+.result-value {
+  margin: 0 10rpx;
+}
+
+.result-desc {
+  font-size: 24rpx;
+}
+
+.btn-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 0 0 50px;
+  .btn-area {
+    width: 80vw;
+    display: flex;
+    gap: 20px;
+    .btn {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 15px;
+      border-radius: 8px;
+      color: #fff;
+      background-color: #05f;
+      box-shadow: 0 10px 10px rgba(7, 12, 39, 0.1);
+    }
+    .next-step {
+      width: 100%;
+    }
+    .prev-step {
+      flex: 1;
+      background-color: #fff;
+      color: #333;
+    }
+    .save {
+      flex: 1;
+    }
+  }
+}

@@ -1,0 +1,253 @@
+.container {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  .item {
+    margin-bottom: 15px;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    .title {
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+    .section {
+      .row1 {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        margin-bottom: 20px;
+        gap: 5px;
+        .label {
+          color: #333;
+          display: flex;
+          align-items: center;
+          font-size: 14px;
+        }
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin-bottom: 20px;
+        .label {
+          color: #333;
+          display: flex;
+          align-items: center;
+          font-size: 14px;
+        }
+        .content1 {
+          display: flex;
+          justify-content: flex-end;
+          align-items: center;
+        }
+        .unit {
+          padding-left: 10px;
+          color: #333;
+        }
+      }
+    }
+  }
+}
+.time-select-page {
+  box-sizing: border-box;
+}
+
+.page-header {
+  margin-bottom: 30rpx;
+}
+
+.page-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+/* 时间格子容器 */
+.time-grid-container {
+  overflow-y: auto;
+  background-color: #fff;
+  border-radius: 12rpx;
+}
+
+/* 时间格子布局 */
+.time-grid {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.time-cell {
+  font-size: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 12px;
+  border-radius: 6px;
+  border-radius: 99px;
+  border-radius: 4px;
+  background-color: #f3f4f6;
+  background-color: #f0f0f0;
+  transition: all 0.35s ease-in-out;
+  margin-bottom: 8px;
+
+  width: calc(100% / 4 - 5px);
+
+  box-sizing: border-box;
+  user-select: none;
+  position: relative;
+  color: rgba(153, 153, 153, 0.5);
+  color: #333;
+  pointer-events: auto;
+}
+
+.time-cell.occupied {
+  opacity: 0.8;
+  color: #ff4d4f;
+}
+
+.occupied-indicator {
+  position: absolute;
+  top: 2px;
+  font-size: 8px;
+  color: #ff4d4f;
+  line-height: 1;
+  z-index: 2;
+  font-weight: bold;
+}
+
+.occupied-indicator.left-occupied {
+  right: auto;
+  left: 4px;
+}
+
+.occupied-indicator.right-occupied {
+  right: 4px;
+}
+
+.occupied-indicator.center-occupied {
+  right: 4px;
+}
+
+.time-cell-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  z-index: 1;
+}
+
+.time-cell-half {
+  width: 50%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.time-cell-left {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+.time-cell-right {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.selected-half {
+  background: #eff2fe;
+  opacity: 0.8;
+}
+
+.occupied-half {
+  background-color: #fff2f0;
+  border-color: #ff4d4f;
+}
+
+.occupied-selected-half {
+  opacity: 0.8;
+}
+
+.time-cell.start,
+.time-cell.end {
+  color: #fff;
+}
+
+.time-cell.start,
+.time-cell.end {
+  color: #4e6ef2;
+  font-weight: bold;
+}
+
+.time-cell.range {
+  color: #4e6ef2;
+  // transform: scale(1.1);
+  font-weight: bold;
+}
+
+.time-cell:not(.occupied):active {
+  background-color: #e6f7ff;
+}
+
+.selected-result {
+  background-color: #fff;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  line-height: 28rpx;
+  display: flex;
+  align-items: center;
+}
+
+.result-label {
+  color: #666;
+  font-size: 24rpx;
+}
+
+.result-value {
+  color: #4e6ef2;
+  font-weight: bold;
+  margin: 0 10rpx;
+}
+
+.result-desc {
+  color: #999;
+  font-size: 24rpx;
+}
+
+.btn-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 25px 0 50px;
+  .btn-area {
+    width: 80vw;
+    display: flex;
+    gap: 20px;
+    .btn {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 15px;
+      border-radius: 8px;
+      color: #fff;
+      background-color: #05f;
+      box-shadow: 0 10px 10px rgba(7, 12, 39, 0.1);
+    }
+    .next-step {
+      width: 100%;
+    }
+    .prev-step {
+      flex: 1;
+      background-color: #fff;
+      color: #333;
+    }
+    .save {
+      flex: 1;
+    }
+  }
+}
