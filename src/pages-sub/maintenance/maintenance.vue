@@ -1,270 +1,855 @@
 <template>
   <div style="height: 0;">
     <wd-navbar
-      placeholder left-arrow safe-area-inset-top fixed title="维护申请"
-      style="--wot-navbar-background:transparent;--wot-color-border-light:transparent"
+      placeholder
+      left-arrow
+      safe-area-inset-top
+      fixed
+      :title="isDetail ? '维保工单详情' : '新建维保单'"
+      style="--wot-navbar-background: transparent; --wot-color-border-light: transparent"
       @click-left="uni.navigateBack()"
     />
   </div>
   <div :style="`height: ${navBarConfig.customNavBarHeight}px;`" />
-  <div class="relative">
-    <scroll-view :scroll-y="scrollY" :enable-back-to-top="true" :style="`height: calc(100vh - ${navBarConfig.customNavBarHeight}px);`">
-      <view
-        class="container relative box-border p-[20px]"
-      >
-        <view class="tickets">
-          <view class="content">
-            <wd-row custom-class="mb-[10px]">
-              <wd-col :span="6">
-                <view class="text-[#8F8F8F]">
-                  编号
-                </view>
-              </wd-col>
-              <wd-col :span="18">
-                <view class="text-right text-[#303032]">
-                  {{ state.coupon?.serialNumber || '-' }}
-                </view>
-              </wd-col>
-            </wd-row>
-            <wd-row custom-class="mb-[10px]">
-              <wd-col :span="12">
-                <view class="text-[#8F8F8F]">
-                  申请人
-                </view>
-              </wd-col>
-              <wd-col :span="12">
-                <view class="text-right text-[#303032]">
-                  {{ is_certified ? `${state.userInfo.department}-${state.userInfo.name}` : '-' }}
-                </view>
-              </wd-col>
-            </wd-row>
+  <scroll-view scroll-y :enable-back-to-top="true" :style="`height: calc(100vh - ${navBarConfig.customNavBarHeight}px);`">
+    <view class="page-container">
+      <template v-if="isDetail">
+        <view class="current-node-banner">
+          当前流程节点：{{ currentNode?.nodeName || currentNode?.nodeCode || '-' }}
+        </view>
 
-            <wd-row custom-class="mb-[10px]">
-              <wd-col :span="12">
-                <view class="text-[#8F8F8F]">
-                  设备编号
-                </view>
-              </wd-col>
-              <wd-col :span="12">
-                <view class="text-right text-[#303032]">
-                  {{ currentLicensePlate || '-' }}
-                </view>
-              </wd-col>
-            </wd-row>
-            <wd-row custom-class="mb-[10px]">
-              <wd-col :span="12">
-                <view class="text-[#8F8F8F]">
-                  申请日期
-                </view>
-              </wd-col>
-              <wd-col :span="12">
-                <view class="text-right text-[#303032]">
-                  {{ dayjs().format('YYYYMMDD') }}
-                </view>
-              </wd-col>
-            </wd-row>
-            <wd-row custom-class="mb-[10px]">
-              <wd-col :span="6">
-                <view class="text-[#8F8F8F]">
-                  验证码
-                </view>
-              </wd-col>
-              <wd-col :span="18">
-                <view class="text-right text-[#303032]">
-                  {{ state.coupon?.code || '-' }}
-                </view>
-              </wd-col>
-            </wd-row>
-
-            <wd-row custom-class="mb-[10px]">
-              <wd-col :span="12" :offset="12">
-                <view class="mb-[10px] text-right text-[#303032]">
-                  <div v-if="state.unlimitedQRCode && !licensePlateLoading" class="flex flex-col items-end">
-                    <div>
-                      <image :src="state.unlimitedQRCode" :show-menu-by-longpress="false" mode="widthFix" class="h-[120px] w-[120px]" alt="二维码" />
-                      <div class="full-width pt-[10px] text-center text-[#999999]">
-                        确认码
-                      </div>
-                    </div>
-                  </div>
-                  <view v-else class="h-[120px] w-[120px]">
-                    <wd-loading type="spinner" size="50px" />
-                  </view>
-                </view>
-              </wd-col>
-            </wd-row>
+        <view class="section-card">
+          <view class="section-title">
+            工单信息
           </view>
-          <view class="bot">
-            <wd-icon name="warning" size="16px" color="#999999" />仅限当日使用，重复提交无效
+          <view class="info-row">
+            <text>项目</text><text>{{ form.projectName || '-' }}</text>
+          </view>
+          <view class="info-row">
+            <text>联系人</text><text>{{ form.contactName || '-' }}</text>
+          </view>
+          <view class="info-row">
+            <text>联系电话</text><text>{{ form.contactPhone || '-' }}</text>
+          </view>
+          <view class="info-row">
+            <text>联系人说明</text><text>{{ form.contactRemark || '-' }}</text>
+          </view>
+          <view class="field-title">
+            故障描述
+          </view>
+          <view class="readonly-text">
+            {{ form.faultDescription || '-' }}
           </view>
         </view>
-        <div class="mt-[50px] text-center">
-          <view v-if="state.licensePlates.length > 1" class="mb-[20px]">
-            <wd-radio-group v-model="currentLicensePlate" style="background: transparent;" inline shape="dot" size="large" @change="changeLicensePlate">
-              <div class="flex flex-row justify-center space-x-1" style="--wot-radio-label-color: #303032;">
-                <wd-radio v-for="item in state.licensePlates" :key="item.code" :value="item.code">
-                  {{ item.code }}
-                </wd-radio>
-              </div>
-            </wd-radio-group>
-          </view>
-          <wd-button
-            :disabled="!is_certified && state.availableCoupons.length > 0 && !!licensePlate"
-            custom-class="custom-shadow"
-            custom-style="background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%);"
-            @click="getTicket"
-          >
-            提交申请
-          </wd-button>
-        </div>
 
-        <div>
-          <div class="normal-section">
-            <div class="normal-text-title">
-              维护说明
-            </div>
-            <div class="normal-text">
-              一、请先在首页「我的」中完成认证后再使用，仅对内部员工开放。
-            </div>
-          </div>
-        </div>
-      </view>
-    </scroll-view>
-  </div>
+        <view v-if="onsitePersons.length" class="section-card">
+          <view class="section-title">
+            已选到场人员
+          </view>
+          <view v-for="person in onsitePersons" :key="person.userId" class="person-row">
+            {{ person.companyName || '-' }} / {{ person.name || '-' }} / {{ person.phoneNumber || '-' }}
+          </view>
+        </view>
+
+        <view v-if="canEdit" class="section-card">
+          <view class="section-title">
+            本次处理
+          </view>
+
+          <view v-if="needsTargetUser && currentNodeCode !== 'OWNER_ASSIGN'" class="field-block">
+            <view class="field-title">
+              下一节点处理人
+            </view>
+            <picker mode="selector" :range="nextCandidateNames" @change="selectNextCandidate">
+              <view class="picker-value">
+                {{ selectedNextCandidateName || '请选择处理人' }}
+              </view>
+            </picker>
+          </view>
+
+          <view v-if="currentNodeCode === 'OWNER_ASSIGN'" class="field-block">
+            <view class="field-title">
+              流转方式
+            </view>
+            <wd-radio-group v-model="ownerFlowMode" inline shape="dot">
+              <wd-radio value="NEXT_NODE">
+                选择处理人
+              </wd-radio>
+              <wd-radio value="SELF_LOOP">
+                重新指派负责人
+              </wd-radio>
+            </wd-radio-group>
+            <view v-if="ownerFlowMode === 'SELF_LOOP'" class="field-block mt-3">
+              <picker mode="selector" :range="ownerCandidateNames" @change="selectOwnerTarget">
+                <view class="picker-value">
+                  {{ selectedOwnerTargetName || '请选择负责人' }}
+                </view>
+              </picker>
+            </view>
+            <view v-else class="field-block mt-3">
+              <picker mode="selector" :range="nextCandidateNames" @change="selectNextCandidate">
+                <view class="picker-value">
+                  {{ selectedNextCandidateName || '请选择处理人' }}
+                </view>
+              </picker>
+            </view>
+          </view>
+
+          <view v-if="currentNodeCode === 'OWNER_ASSIGN' && ownerFlowMode === 'NEXT_NODE'" class="field-block">
+            <view class="field-title">
+              计划到场人员
+            </view>
+            <view v-if="onsiteCandidates.length" class="onsite-picker" @click="openOnsitePicker">
+              <view class="onsite-picker-summary">
+                <text v-if="selectedPlannedOnsiteUserIds.length" class="onsite-picker-count">已选择 {{ selectedPlannedOnsiteUserIds.length }} 人</text>
+                <text v-else class="onsite-picker-placeholder">请选择计划到场人员</text>
+                <text class="onsite-picker-arrow">›</text>
+              </view>
+              <view v-if="selectedPlannedOnsiteNames" class="onsite-picker-names">
+                {{ selectedPlannedOnsiteNames }}
+              </view>
+            </view>
+            <view v-else class="empty-tip">
+              暂无可选到场人员
+            </view>
+
+            <wd-popup
+              v-model="onsitePickerVisible"
+              position="bottom"
+              safe-area-inset-bottom
+              custom-style="height: 72vh; border-radius: 24rpx 24rpx 0 0;"
+              @close="closeOnsitePicker"
+            >
+              <view class="onsite-picker-panel">
+                <view class="onsite-picker-header">
+                  <text class="onsite-picker-title">选择计划到场人员</text>
+                  <text class="onsite-picker-done" @click.stop="closeOnsitePicker">完成</text>
+                </view>
+                <wd-input
+                  v-model="onsiteSearchKeyword"
+                  clearable
+                  no-border
+                  placeholder="搜索姓名、公司或手机号"
+                  custom-class="onsite-picker-search"
+                  @click.stop
+                />
+                <view class="onsite-picker-toolbar">
+                  <text>已选 {{ selectedPlannedOnsiteUserIds.length }} 人</text>
+                  <text class="onsite-picker-select-all" @click.stop="toggleOnsiteCandidates">{{ allVisibleOnsiteSelected ? '取消全选' : '全选当前结果' }}</text>
+                </view>
+                <scroll-view scroll-y class="onsite-picker-list">
+                  <view v-for="person in filteredOnsiteCandidates" :key="onsitePersonId(person)" class="onsite-candidate-row">
+                    <wd-checkbox
+                      :model-value="isOnsitePersonSelected(person)"
+                      shape="square"
+                      @change="toggleOnsitePerson(person)"
+                    >
+                      <view class="onsite-candidate-info">
+                        <text class="onsite-candidate-name">{{ person.name || '-' }}</text>
+                        <text class="onsite-candidate-detail">{{ person.companyName || '-' }} / {{ person.phoneNumber || '-' }}</text>
+                      </view>
+                    </wd-checkbox>
+                  </view>
+                  <view v-if="!filteredOnsiteCandidates.length" class="onsite-picker-empty">
+                    未找到匹配人员
+                  </view>
+                </scroll-view>
+              </view>
+            </wd-popup>
+          </view>
+
+          <view v-if="currentNodeCode === 'ONSITE_ARRIVE'" class="field-block">
+            <wd-button block type="info" custom-style="margin-top: 12px;" :loading="scanning" @click="scanOnsiteCode">
+              {{ onsiteCode ? '重新扫描现场维保码' : '扫描现场维保码' }}
+            </wd-button>
+            <view v-if="onsiteCode" class="scan-result">
+              维保码：{{ onsiteCode }}
+            </view>
+            <view v-if="location.longitude != null && location.latitude != null" class="scan-result">
+              位置：{{ location.longitude }}, {{ location.latitude }}
+            </view>
+          </view>
+
+          <view v-if="currentNodeCode === 'ONSITE_FINISH'" class="field-block">
+            <view class="field-title">
+              解决结果
+            </view>
+            <wd-radio-group v-model="actionForm.solutionResult" inline shape="dot">
+              <wd-radio :value="1">
+                已恢复，保持观察
+              </wd-radio>
+              <wd-radio :value="2">
+                未恢复，另行安排
+              </wd-radio>
+            </wd-radio-group>
+            <wd-textarea
+              v-model="actionForm.solutionRemark"
+              class="mt-3"
+              :maxlength="1000"
+              show-word-limit
+              clearable
+              placeholder="请输入解决结果备注"
+            />
+          </view>
+
+          <view v-if="currentNodeCode !== 'OWNER_ASSIGN' || ownerFlowMode === 'NEXT_NODE'" class="field-block">
+            <view class="field-title">
+              本节点照片/视频
+            </view>
+            <wd-upload
+              v-model:file-list="actionFileList"
+              :limit="9"
+              accept="media"
+              :reupload="false"
+              :upload-method="customActionUpload"
+              :show-limit-num="false"
+              @before-upload="beforeUpload"
+              @remove="deleteActionPic"
+              @change="handleActionChange"
+            />
+          </view>
+
+          <view class="button-row">
+            <wd-button v-if="currentNodeCode === 'ONSITE_FINISH'" type="info" :loading="submitting" @click="submitAction('RETURN')">
+              退回负责人
+            </wd-button>
+            <wd-button
+              type="primary"
+              :loading="submitting"
+              @click="submitAction(currentNodeCode === 'ONSITE_FINISH' ? 'ARCHIVE' : 'SUBMIT')"
+            >
+              {{ currentNodeCode === 'ONSITE_FINISH' ? '归档工单' : '提交处理' }}
+            </wd-button>
+          </view>
+        </view>
+
+        <view v-for="group in actionHistoryGroups" :key="group.key" class="section-card">
+          <view class="section-title">
+            {{ group.label }}
+          </view>
+          <view v-if="group.actionType || group.handlerUserName" class="log-row">
+            <view>{{ group.actionType || '-' }} · {{ group.handlerUserName || '-' }}</view>
+            <view>{{ group.createTime || '-' }}</view>
+            <view v-if="group.remark">
+              {{ group.remark }}
+            </view>
+          </view>
+          <view v-for="item in group.solutionResults" :key="item.key" class="field-block mt-3">
+            <view class="field-title">
+              解决结果
+            </view>
+            <view class="info-row">
+              <text>处理结果</text><text>{{ item.resultText }}</text>
+            </view>
+            <view v-if="item.solutionRemark" class="readonly-text mt-3">
+              {{ item.solutionRemark }}
+            </view>
+          </view>
+          <view v-if="group.files.length" class="field-block mt-3">
+            <view class="field-title">
+              本节点照片/视频
+            </view>
+            <wd-upload :file-list="group.files" :limit="9" accept="media" disabled />
+          </view>
+        </view>
+      </template>
+
+      <template v-else>
+        <view class="section-card">
+          <view class="section-title">
+            新建维保单
+          </view>
+          <view class="field-title">
+            选择项目
+          </view>
+          <picker mode="selector" :range="projectNames" @change="selectProject">
+            <view class="picker-value">
+              {{ selectedProject?.projectName || '请选择项目' }}
+            </view>
+          </picker>
+          <view v-if="selectedProject" class="contact-box">
+            <view>联系人：{{ selectedProject.contactName || '-' }}</view>
+            <view>联系电话：{{ selectedProject.contactPhone || '-' }}</view>
+            <view>联系人说明：{{ selectedProject.contactRemark || '-' }}</view>
+          </view>
+          <view class="field-title mt-3">
+            故障描述
+          </view>
+          <wd-textarea
+            v-model="createForm.faultDescription"
+            :maxlength="1000"
+            show-word-limit
+            clearable
+            placeholder="请输入故障描述"
+          />
+          <view class="field-title mt-3">
+            上传图片或视频
+          </view>
+          <wd-upload
+            v-model:file-list="fileList"
+            :limit="9"
+            accept="media"
+            :reupload="false"
+            :upload-method="customUpload"
+            :show-limit-num="false"
+            @before-upload="beforeUpload"
+            @remove="deletePic"
+            @change="handleChange"
+          />
+          <view class="field-title mt-3">
+            下一节点处理人
+          </view>
+          <picker mode="selector" :range="nextCandidateNames" @change="selectNextCandidate">
+            <view class="picker-value">
+              {{ selectedNextCandidateName || '请选择下一节点处理人' }}
+            </view>
+          </picker>
+          <wd-button block type="primary" :loading="submitting" custom-style="margin-top: 20px;" @click="createWorkOrder">
+            提交维保单
+          </wd-button>
+        </view>
+      </template>
+    </view>
+  </scroll-view>
   <wd-toast />
-  <loadingBox :show="wdLoading" />
+  <loadingBox :show="loading" />
 </template>
 
 <script setup>
-import dayjs from 'dayjs'
-import { inject, nextTick, onMounted, reactive, ref } from 'vue'
-import { useMessage, useToast } from 'wot-design-uni'
+import { computed, inject, reactive, ref } from 'vue'
+import { useToast } from 'wot-design-uni'
+import { simpleLoginApi } from '@/api/login/simple-login-api.js'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
 import { useUserStore } from '@/store/user'
 
-// 注入全局属性
 const navBarConfig = inject('navBarConfig')
-
+const apiUrl = import.meta.env.VITE_SERVER_BASEURL
 const openId = useUserStore().openId
 const toast = useToast()
-const message = useMessage()
-const globalLoadingShow = ref(false)
-const wdLoading = ref(true)
-const is_certified = ref(false)
-const licensePlateLoading = ref(false)
+const loading = ref(true)
+const submitting = ref(false)
+const instanceId = ref('')
+const projects = ref([])
+const nextCandidates = ref([])
+const fileList = ref([])
+const actionFileList = ref([])
+const selectedProject = ref(null)
+const selectedNextCandidateId = ref(null)
+const ownerCandidates = ref([])
+const selectedOwnerTargetId = ref(null)
+const ownerFlowMode = ref('NEXT_NODE')
+const onsiteCandidates = ref([])
+const selectedPlannedOnsiteUserIds = ref([])
+const onsitePickerVisible = ref(false)
+const onsiteSearchKeyword = ref('')
+const onsiteCode = ref('')
+const scanning = ref(false)
+const initialized = ref(false)
+const location = reactive({ longitude: null, latitude: null })
+const runtime = reactive({ instance: null, nodes: [], actionLogs: [], form: {} })
+const createForm = reactive({ faultDescription: '' })
+const actionForm = reactive({ solutionResult: null, solutionRemark: '' })
+const currentUserId = ref(null)
+
+const isDetail = computed(() => !!instanceId.value)
+const detailForm = computed(() => runtime.form || {})
+const form = computed(() => detailForm.value.form || {})
+const files = computed(() => detailForm.value.files || [])
+const onsitePersons = computed(() => detailForm.value.onsitePersons || [])
+const solutionResults = computed(() => detailForm.value.solutionResults || [])
+const actionHistoryGroups = computed(() => {
+  const filesByActionLog = new Map()
+  const unlinkedFiles = []
+  files.value.forEach((file) => {
+    if (file.actionLogId == null) {
+      unlinkedFiles.push(file)
+      return
+    }
+    const key = String(file.actionLogId)
+    filesByActionLog.set(key, [...(filesByActionLog.get(key) || []), file])
+  })
+  const solutionsByActionLog = new Map()
+  const unlinkedSolutions = []
+  solutionResults.value.forEach((item) => {
+    if (item.actionLogId == null) {
+      unlinkedSolutions.push(item)
+      return
+    }
+    const key = String(item.actionLogId)
+    solutionsByActionLog.set(key, [...(solutionsByActionLog.get(key) || []), item])
+  })
+  const nodesById = new Map((runtime.nodes || []).map(item => [String(item.nodeId || item.id), item]))
+  const groups = (runtime.actionLogs || []).map((log, index) => {
+    const key = String(log.id)
+    const actionFiles = filesByActionLog.get(key) || []
+    const actionSolutions = solutionsByActionLog.get(key) || []
+    const node = nodesById.get(String(actionSolutions[0]?.nodeId || actionFiles[0]?.nodeId || log.nodeId))
+    return {
+      key: log.id || `action-${index}`,
+      label: `${node?.nodeName || log.nodeName || log.nodeType || '流程节点'}${log.roundNo ? `（第${log.roundNo}轮）` : ''}`,
+      actionType: log.actionType,
+      handlerUserName: log.handlerUserName,
+      createTime: log.createTime,
+      remark: log.remark,
+      files: normalizeFiles(actionFiles),
+      solutionResults: actionSolutions.map((item, solutionIndex) => ({
+        ...item,
+        key: item.id || `${log.id}-solution-${solutionIndex}`,
+        resultText: formatSolutionResult(item.solutionResult),
+      })),
+    }
+  })
+  if (unlinkedFiles.length || unlinkedSolutions.length) {
+    groups.push({
+      key: 'unlinked-history',
+      label: '未关联动作的历史数据',
+      files: normalizeFiles(unlinkedFiles),
+      solutionResults: unlinkedSolutions.map((item, index) => ({
+        ...item,
+        key: item.id || `unlinked-solution-${index}`,
+        resultText: formatSolutionResult(item.solutionResult),
+      })),
+    })
+  }
+  return groups
+})
+const currentNode = computed(() => (runtime.nodes || []).find(item => item.current))
+const currentNodeCode = computed(() => currentNode.value?.nodeCode || currentNode.value?.nodeType || '')
+const canEdit = computed(() => runtime.instance?.status === 'RUNNING' && Number(runtime.instance?.currentHandlerUserId) === Number(currentUserId.value))
+const needsTargetUser = computed(() => currentNodeCode.value === 'CREATE' || currentNodeCode.value === 'OWNER_ASSIGN')
+const projectNames = computed(() => projects.value.map(item => item.projectName || item.name || '-'))
+const nextCandidateNames = computed(() => nextCandidates.value.map(item => item.name || '-'))
+const ownerCandidateNames = computed(() => ownerCandidates.value.map(item => item.name || '-'))
+const selectedOwnerTargetName = computed(() => ownerCandidates.value.find(item => Number(item.id) === Number(selectedOwnerTargetId.value))?.name || '')
+const selectedNextCandidateName = computed(() => nextCandidates.value.find(item => Number(item.id) === Number(selectedNextCandidateId.value))?.name || '')
+const previousOwnerUserId = computed(() => {
+  const logs = (runtime.actionLogs || []).filter(item => (item.nodeCode || item.nodeType) === 'OWNER_ASSIGN' && item.handlerUserId != null)
+  return logs.length ? logs[logs.length - 1].handlerUserId : null
+})
+const filteredOnsiteCandidates = computed(() => {
+  const keyword = onsiteSearchKeyword.value.trim().toLowerCase()
+  if (!keyword)
+    return onsiteCandidates.value
+  return onsiteCandidates.value.filter(item => [item.name, item.companyName, item.phoneNumber]
+    .some(value => String(value || '').toLowerCase().includes(keyword)))
+})
+const selectedPlannedOnsiteNames = computed(() => onsiteCandidates.value
+  .filter(item => selectedPlannedOnsiteUserIds.value.includes(onsitePersonId(item)))
+  .map(item => item.name || '-')
+  .slice(0, 3)
+  .join(', '))
+const allVisibleOnsiteSelected = computed(() => filteredOnsiteCandidates.value.length > 0
+  && filteredOnsiteCandidates.value.every(item => selectedPlannedOnsiteUserIds.value.includes(onsitePersonId(item))))
 
 definePage({
   style: {
     navigationStyle: 'custom',
-    navigationBarTitleText: '维护申请',
+    navigationBarTitleText: '新建维保单',
     disableScroll: true,
   },
 })
-// ---------------------1----------------------
 
-const scrollY = ref(true)
-const currentLicensePlate = ref('-')
+async function getCurrentUser() {
+  const info = await simpleLoginApi.getEmployeeInfo({ openId })
+  currentUserId.value = info?.id
+  return info
+}
 
-const state = reactive({
-  availableCoupons: [],
-  userInfo: {},
-  unlimitedQRCode: '',
-  licensePlates: [],
-  coupon: {},
-})
+async function initCreate() {
+  const [projectList, nodes] = await Promise.all([othersApi.projectList({ openId }), othersApi.workflowNodeList()])
+  projects.value = projectList || []
+  const ownerAssignNode = (nodes || []).find(item => item.nodeCode === 'OWNER_ASSIGN' || item.nodeType === 'OWNER_ASSIGN')
+  nextCandidates.value = ownerAssignNode?.id ? await othersApi.workflowNodeCandidates(ownerAssignNode.id) || [] : []
+}
 
-async function pageInit(seconds = false) {
-  wdLoading.value = true
-  const result = await othersApi.parkingInit({ openId })
-  console.log(result)
-  const { availableCoupons, userInfo, unlimitedQRCode, licensePlates, coupon } = result
-  state.availableCoupons = availableCoupons
-  state.userInfo = userInfo
-  state.unlimitedQRCode = unlimitedQRCode
+function resetActionState() {
+  actionFileList.value = []
+  selectedPlannedOnsiteUserIds.value = []
+  selectedOwnerTargetId.value = null
+  ownerFlowMode.value = 'NEXT_NODE'
+  onsiteCode.value = ''
+  location.longitude = null
+  location.latitude = null
+  actionForm.solutionResult = null
+  actionForm.solutionRemark = ''
+}
 
-  state.coupon = coupon
-  if (userInfo.type === 2) {
-    is_certified.value = true
-  }
-  if (!seconds) {
-    state.licensePlates = licensePlates
-    if (state.licensePlates.length > 0) {
-      let defaultLicensePlate = state.licensePlates.find(item => item.default === 1)
-      console.log('defaultLicensePlate', defaultLicensePlate)
-      if (!defaultLicensePlate) {
-        defaultLicensePlate = state.licensePlates[0]
-      }
-      currentLicensePlate.value = defaultLicensePlate?.code || '-'
+async function initDetail() {
+  const result = await othersApi.workflowInstanceRuntime(instanceId.value)
+  Object.assign(runtime, result || {})
+  actionFileList.value = []
+  fileList.value = files.value.map(item => ({ id: item.fileId, url: item.src, status: 'success' }))
+  onsiteCode.value = detailForm.value.form?.onsiteMaintenanceCode || ''
+  location.longitude = detailForm.value.form?.longitude ?? null
+  location.latitude = detailForm.value.form?.latitude ?? null
+  actionForm.solutionResult = null
+  actionForm.solutionRemark = ''
+  const current = currentNode.value
+  if (current?.nodeId) {
+    if (currentNodeCode.value === 'CREATE' || currentNodeCode.value === 'OWNER_ASSIGN') {
+      const next = (runtime.nodes || []).find(item => item.sortNo > current.sortNo)
+      nextCandidates.value = next?.nodeId ? await othersApi.workflowNodeCandidates(next.nodeId) || [] : []
+    }
+    if (currentNodeCode.value === 'OWNER_ASSIGN') {
+      ownerFlowMode.value = 'NEXT_NODE'
+      selectedNextCandidateId.value = null
+      selectedOwnerTargetId.value = null
+      ownerCandidates.value = await othersApi.workflowNodeCandidates(current.nodeId) || []
+      onsiteCandidates.value = await othersApi.workflowOnsiteCandidates() || []
+      selectedPlannedOnsiteUserIds.value = (detailForm.value.onsitePersons || detailForm.value.form?.onsitePersons || [])
+        .map(item => onsitePersonId(item))
+        .filter(Boolean)
     }
   }
-  wdLoading.value = false
 }
 
-// ---------------------- 生命周期函数 ------------------------
+async function init() {
+  loading.value = true
+  try {
+    await getCurrentUser()
+    resetActionState()
+    if (isDetail.value)
+      await initDetail()
+    else
+      await initCreate()
+  }
+  catch (error) {
+    uni.showToast({ title: error?.message || '页面加载失败', icon: 'none' })
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+function selectProject(event) {
+  selectedProject.value = projects.value[Number(event.detail.value)] || null
+}
+
+function selectNextCandidate(event) {
+  selectedNextCandidateId.value = nextCandidates.value[Number(event.detail.value)]?.id || null
+}
+
+function selectOwnerTarget(event) {
+  selectedOwnerTargetId.value = ownerCandidates.value[Number(event.detail.value)]?.id || null
+}
+
+function formatSolutionResult(value) {
+  if (Number(value) === 1)
+    return '已恢复，保持观察'
+  if (Number(value) === 2)
+    return '未恢复，另行安排'
+  return '-'
+}
+
+function openOnsitePicker() {
+  onsiteSearchKeyword.value = ''
+  onsitePickerVisible.value = true
+}
+
+function closeOnsitePicker() {
+  onsitePickerVisible.value = false
+  onsiteSearchKeyword.value = ''
+}
+
+function onsitePersonId(person) {
+  return String(person?.id ?? person?.userId ?? '')
+}
+
+function isOnsitePersonSelected(person) {
+  return selectedPlannedOnsiteUserIds.value.includes(onsitePersonId(person))
+}
+
+function toggleOnsitePerson(person) {
+  const id = onsitePersonId(person)
+  if (!id)
+    return
+  if (isOnsitePersonSelected(person)) {
+    selectedPlannedOnsiteUserIds.value = selectedPlannedOnsiteUserIds.value.filter(item => item !== id)
+    return
+  }
+  selectedPlannedOnsiteUserIds.value = [...selectedPlannedOnsiteUserIds.value, id]
+}
+
+function toggleOnsiteCandidates() {
+  const visibleIds = filteredOnsiteCandidates.value.map(onsitePersonId).filter(Boolean)
+  if (allVisibleOnsiteSelected.value) {
+    selectedPlannedOnsiteUserIds.value = selectedPlannedOnsiteUserIds.value.filter(id => !visibleIds.includes(id))
+    return
+  }
+  selectedPlannedOnsiteUserIds.value = [...new Set([...selectedPlannedOnsiteUserIds.value, ...visibleIds])]
+}
+
+async function createWorkOrder() {
+  if (submitting.value)
+    return
+  if (!selectedProject.value)
+    return toast.error({ msg: '请选择项目' })
+  if (!createForm.faultDescription.trim())
+    return toast.error({ msg: '请输入故障描述' })
+  if (!selectedNextCandidateId.value)
+    return toast.error({ msg: '请选择下一节点处理人' })
+  submitting.value = true
+  try {
+    const result = await othersApi.workflowInstanceStart({
+      bizType: 'WORK_ORDER',
+      bizId: '30001',
+      handlerUserId: currentUserId.value,
+      remark: '创建维保工单',
+      form: {
+        projectId: selectedProject.value.id,
+        faultDescription: createForm.faultDescription,
+        fileCodes: uploadedCodes(),
+      },
+    })
+    await othersApi.workflowInstanceSubmit({
+      instanceId: result.instanceId,
+      targetUserId: selectedNextCandidateId.value,
+      actionType: 'SUBMIT',
+      remark: '创建后提交负责人',
+    })
+    toast.success({ msg: '提交成功' })
+    setTimeout(() => uni.redirectTo({ url: `/pages-sub/maintenance/maintenance?instanceId=${result.instanceId}` }), 500)
+  }
+  catch (error) {
+    toast.error({ msg: error?.message || '提交失败' })
+  }
+  finally {
+    submitting.value = false
+  }
+}
+
+function buildActionForm() {
+  const payload = { fileCodes: actionUploadedCodes() }
+  if (currentNodeCode.value === 'OWNER_ASSIGN' && ownerFlowMode.value === 'NEXT_NODE') {
+    payload.onsitePersons = onsiteCandidates.value
+      .filter(item => selectedPlannedOnsiteUserIds.value.includes(onsitePersonId(item)))
+      .map(item => ({ userId: item.id }))
+  }
+  if (currentNodeCode.value === 'ONSITE_ARRIVE') {
+    payload.onsiteMaintenanceCode = onsiteCode.value
+    payload.longitude = location.longitude
+    payload.latitude = location.latitude
+  }
+  if (currentNodeCode.value === 'ONSITE_FINISH') {
+    if (actionForm.solutionResult) {
+      payload.solutionResult = actionForm.solutionResult
+      payload.solutionRemark = actionForm.solutionRemark
+    }
+  }
+  return payload
+}
+
+async function submitAction(actionType) {
+  if (submitting.value)
+    return
+  if (currentNodeCode.value === 'CREATE' && !selectedNextCandidateId.value)
+    return toast.error({ msg: '请选择下一节点处理人' })
+  if (actionType === 'RETURN' && !previousOwnerUserId.value)
+    return toast.error({ msg: '未找到上一次负责人，无法退回' })
+  if (currentNodeCode.value === 'OWNER_ASSIGN') {
+    if (ownerFlowMode.value === 'SELF_LOOP') {
+      if (!selectedOwnerTargetId.value)
+        return toast.error({ msg: '请选择重新指派的负责人' })
+    }
+    else if (!selectedNextCandidateId.value) {
+      return toast.error({ msg: '请选择下一节点处理人' })
+    }
+  }
+  if (currentNodeCode.value === 'OWNER_ASSIGN' && ownerFlowMode.value === 'NEXT_NODE' && !selectedPlannedOnsiteUserIds.value.length)
+    return toast.error({ msg: '请选择计划到场人员' })
+  if (currentNodeCode.value === 'ONSITE_ARRIVE') {
+    if (!onsiteCode.value)
+      return toast.error({ msg: '请先扫描现场维保码' })
+    if (location.longitude == null || location.latitude == null)
+      return toast.error({ msg: '请获取当前位置' })
+  }
+  if (currentNodeCode.value === 'ONSITE_FINISH' && actionForm.solutionResult === 2 && !actionForm.solutionRemark.trim())
+    return toast.error({ msg: '未恢复时请填写解决结果备注' })
+  submitting.value = true
+  try {
+    const payload = {
+      instanceId: Number(instanceId.value),
+      openId,
+      actionType,
+      remark: actionType === 'ARCHIVE' ? '归档工单' : '提交处理',
+      form: buildActionForm(),
+    }
+    if (actionType === 'RETURN') {
+      payload.targetUserId = previousOwnerUserId.value
+    }
+    else if (currentNodeCode.value === 'CREATE') {
+      payload.targetUserId = selectedNextCandidateId.value
+    }
+    else if (currentNodeCode.value === 'OWNER_ASSIGN') {
+      if (ownerFlowMode.value === 'SELF_LOOP')
+        payload.targetUserId = selectedOwnerTargetId.value
+      else
+        payload.nextTargetUserId = selectedNextCandidateId.value
+    }
+    await othersApi.workflowInstanceSubmit(payload)
+    toast.success({ msg: '提交成功' })
+    await initDetail()
+  }
+  catch (error) {
+    toast.error({ msg: error?.message || '提交失败' })
+  }
+  finally {
+    submitting.value = false
+  }
+}
+
+function uploadedCodes() {
+  return fileList.value.map(item => item.id || item.code).filter(Boolean)
+}
+
+function actionUploadedCodes() {
+  return actionFileList.value.map(item => item.id || item.code).filter(Boolean)
+}
+
+function normalizeFiles(items) {
+  return (items || []).map(item => ({
+    id: item.fileId || item.id || item.code,
+    url: item.src || item.url,
+    status: 'success',
+  }))
+}
+
+function beforeUpload() {
+  return false
+}
+
+function handleChange(list) {
+  fileList.value = list
+}
+
+async function customUpload(file) {
+  return uploadToList(file, fileList)
+}
+
+async function customActionUpload(file) {
+  return uploadToList(file, actionFileList)
+}
+
+async function uploadToList(file, targetList) {
+  const filesToUpload = [].concat(file)
+  for (const item of filesToUpload) {
+    try {
+      const result = JSON.parse(await uploadFilePromise(item.url))
+      const uploaded = result?.data || result
+      const fileInfo = Array.isArray(uploaded) ? uploaded[0] : uploaded
+      targetList.value.push({ ...item, status: 'success', id: fileInfo.code, url: fileInfo.src || item.url })
+    }
+    catch (error) {
+      toast.error({ msg: '文件上传失败' })
+    }
+  }
+}
+
+function uploadFilePromise(url) {
+  return new Promise((resolve, reject) => {
+    uni.uploadFile({
+      url: `${apiUrl}/file/fileUpload`,
+      filePath: url,
+      name: 'file',
+      formData: { user: openId, openId },
+      success: res => resolve(res.data),
+      fail: reject,
+    })
+  })
+}
+
+function deletePic({ file }) {
+  fileList.value = fileList.value.filter(item => item !== file)
+}
+
+function handleActionChange(list) {
+  actionFileList.value = list
+}
+
+function deleteActionPic({ file }) {
+  actionFileList.value = actionFileList.value.filter(item => item !== file)
+}
+
+function getLocation() {
+  return new Promise((resolve, reject) => {
+    uni.getSetting({
+      success: (setting) => {
+        const locationAuth = setting.authSetting?.['scope.userLocation']
+        if (locationAuth === false) {
+          uni.showModal({
+            title: '位置权限未开启',
+            content: '需要位置权限才能使用该功能，请前往设置开启',
+            confirmText: '去设置',
+            success: (modal) => {
+              if (!modal.confirm) {
+                reject(new Error('location permission denied'))
+                return
+              }
+              uni.openSetting({
+                success: (result) => {
+                  if (result.authSetting?.['scope.userLocation'])
+                    getLocation().then(resolve).catch(reject)
+                  else
+                    reject(new Error('location permission denied'))
+                },
+                fail: reject,
+              })
+            },
+            fail: reject,
+          })
+          return
+        }
+
+        const getPosition = () => uni.getLocation({ type: 'gcj02', success: resolve, fail: reject })
+        if (locationAuth) {
+          getPosition()
+          return
+        }
+        uni.authorize({ scope: 'scope.userLocation', success: getPosition, fail: reject })
+      },
+      fail: reject,
+    })
+  })
+}
+
+async function scanOnsiteCode() {
+  if (scanning.value)
+    return
+  scanning.value = true
+  try {
+    const scanResult = await new Promise((resolve, reject) => {
+      uni.scanCode({ onlyFromCamera: true, success: resolve, fail: reject })
+    })
+    const position = await getLocation()
+    onsiteCode.value = scanResult.result || ''
+    location.longitude = position.longitude
+    location.latitude = position.latitude
+  }
+  catch (error) {
+    if (error?.errMsg?.includes('cancel'))
+      return
+    const permissionDenied = error?.message?.includes('location permission denied')
+      || error?.errMsg?.includes('permission')
+      || error?.errMsg?.includes('auth deny')
+    toast.error({ msg: permissionDenied ? '请在小程序设置中允许位置权限' : error?.errMsg || '扫描或获取位置失败' })
+  }
+  finally {
+    scanning.value = false
+  }
+}
+
+onLoad((options) => {
+  instanceId.value = options?.instanceId || ''
+})
+
 onShow(async () => {
   await uni.$onLaunched
+  if (initialized.value)
+    return
+  initialized.value = true
+  await init()
 })
-onMounted(() => {
-  pageInit()
-})
-
-function changeLicensePlate(value) {
-  console.log(value)
-}
-
-// 提交申请
-function getTicket() {
-  message
-    .confirm({
-      msg: '确认提交？',
-      title: '提示',
-    })
-    .then(() => {
-      takeTicket()
-    })
-    .catch(() => {
-      console.log('取消提交')
-    })
-}
-async function takeTicket() {
-  if (!is_certified.value) {
-    message.alert({ msg: '请先进行认证' })
-    return
-  }
-  if (!currentLicensePlate?.value) {
-    message.alert({ msg: '请完善设备编号' })
-    return
-  }
-  toast.loading({
-    loadingType: 'ring',
-    msg: '提交中',
-  })
-  if (!state.coupon) {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    toast.error({ msg: '暂无可用维护额度' })
-    return
-  }
-  const params = { openId, licensePlateNumber: currentLicensePlate.value, code: state.coupon.code }
-  const result = await othersApi.takeTicket(params)
-  console.log(result)
-  if (result === 1) {
-    toast.close()
-    message
-      .alert({
-        msg: '提交成功',
-        title: '提示',
-      })
-      .then(() => {
-        uni.navigateBack()
-      })
-  }
-  else {
-    toast.error({ msg: '该额度已被使用，请重新获取', closed: () => {
-      pageInit(true)
-    } })
-  }
-}
 </script>
 
 <style lang="scss" scoped>
@@ -277,9 +862,6 @@ page {
     99deg,
     rgba(255, 91, 145, 0.08) 2%,
     rgba(63, 169, 245, 0.1) 51.48%,
-    rgba(58, 175, 246, 0.1) 57.25%,
-    rgba(46, 193, 248, 0.1) 65.5%,
-    rgba(25, 222, 251, 0.1) 74.57%,
     rgba(0, 255, 255, 0.1) 82.82%
   );
 }

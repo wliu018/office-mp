@@ -279,6 +279,7 @@ async function uploadAndRecognize(filePath) {
         },
         formData: {
           openId: useUserStore().openId,
+          user: useUserStore().openId,
         },
         success: (res) => {
           console.log('识别结果', res)

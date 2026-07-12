@@ -133,6 +133,12 @@ export default defineManifestConfig({
     mergeVirtualHostAttributes: true,
     // styleIsolation: 'shared',
     usingComponents: true,
+    permission: {
+      'scope.userLocation': {
+        desc: '用于记录现场维保位置',
+      },
+    },
+    requiredPrivateInfos: ['getLocation'],
     // __usePrivacyCheck__: true,
 	// skyline 相关配置
 	lazyCodeLoading: "requiredComponents",

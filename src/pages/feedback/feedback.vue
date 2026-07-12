@@ -50,8 +50,7 @@
 </template>
 
 <script setup>
-import dayjs from 'dayjs'
-import { inject, nextTick, onMounted, reactive, ref } from 'vue'
+import { inject, reactive, ref } from 'vue'
 import { useToast } from 'wot-design-uni'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
@@ -166,6 +165,7 @@ async function uploadFilePromise(url) {
       name: 'file',
       formData: {
         user: openId,
+        openId,
       },
       success: (res) => {
         console.log('res', res)

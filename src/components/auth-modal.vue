@@ -95,6 +95,9 @@ async function getAvatar(e) {
     url: uploadFilePath,
     filePath: avatarUrl,
     name: 'image',
+    formData: {
+      openId: useUserStore().openId,
+    },
     async success(res) {
       const result = JSON.parse(res.data)
       console.log(result)

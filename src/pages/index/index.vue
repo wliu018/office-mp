@@ -142,7 +142,7 @@ function parkingCoupon(item) {
 
 function maintenance(item) {
   wx.navigateTo({
-    url: `/pages-sub/maintenance/maintenance`,
+    url: `/pages-sub/maintenance/list`,
     routeType: 'wx://zoom',
   })
 }

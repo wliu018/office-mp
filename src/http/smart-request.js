@@ -6,12 +6,28 @@ const baseUrl = import.meta.env.VITE_SERVER_BASEURL
 const MAX_RETRIES = 1
 
 function getUserToken() {
-  let token = useUserStore().token
+  const token = useUserStore().token
   console.log('getUserToken', token)
   if (token) {
     return token
   }
   return ''
+}
+
+function getUserOpenId() {
+  return useUserStore().openId || ''
+}
+
+function withOpenId(data) {
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    return {
+      ...data,
+      openId: data.openId || getUserOpenId(),
+    }
+  }
+  return {
+    openId: getUserOpenId(),
+  }
 }
 
 let isRefreshing = false
@@ -81,7 +97,7 @@ export function request(config) {
       : 'application/json'
     uni.request({
       url: baseUrl + config.url,
-      data: config.data,
+      data: withOpenId(config.data),
       method: config.method || 'GET',
       header: {
         'Content-Type': contentType,
@@ -148,6 +164,7 @@ export function uploadRequest(filePath, folder) {
       name: 'file',
       formData: {
         folder,
+        openId: getUserOpenId(),
       },
       success: (response) => {
         response.data = JSON.parse(response.data.replace('\uFEFF', ''))

@@ -19,6 +19,30 @@ export const othersApi = {
   projectList: (params) => {
     return getRequest(`/project/list`, params)
   },
+  workflowInstanceListByOpenId: (openId) => {
+    return getRequest(`/workflow/instance/list-by-open-id`, { openId })
+  },
+  workflowInstanceProcessedListByOpenId: (openId) => {
+    return getRequest(`/workflow/instance/list-processed-by-open-id`, { openId })
+  },
+  workflowInstanceStart: (params) => {
+    return postRequest(`/workflow/instance`, params)
+  },
+  workflowInstanceRuntime: (instanceId) => {
+    return getRequest(`/workflow/instance/${instanceId}/runtime`)
+  },
+  workflowInstanceSubmit: (params) => {
+    return postRequest(`/workflow/instance/submit`, params)
+  },
+  workflowOnsiteCandidates: () => {
+    return getRequest(`/workflow/form/onsite-candidates`)
+  },
+  workflowNodeCandidates: (nodeId) => {
+    return getRequest(`/workflow/node/${nodeId}/candidate-users`)
+  },
+  workflowNodeList: () => {
+    return getRequest(`/workflow/node/list`)
+  },
   parkingInit: (params) => {
     return getRequest(`/officeParkingCoupon/init`, params)
   },
