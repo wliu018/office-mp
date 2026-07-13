@@ -37,4 +37,8 @@ export const simpleLoginApi = {
   getEmployeeInfo: (params) => {
     return getRequest(`/simpleLogin/getEmployeeInfo/${params.openId}`)
   },
+
+  isMarketPersonnel: (params) => {
+    return getRequest(`/simpleLogin/is-market-personnel/${params.openId}`)
+  },
 }

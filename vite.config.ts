@@ -167,6 +167,7 @@ export default defineConfig(({ command, mode }) => {
       alias: {
         '@': path.join(process.cwd(), './src'),
         '@img': path.join(process.cwd(), './src/static/images'),
+        '@antv/f6-hammerjs': path.join(process.cwd(), './node_modules/@antv/f6-hammerjs/lib/index.js'),
       },
     },
     server: {

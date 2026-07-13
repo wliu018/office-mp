@@ -12,13 +12,29 @@
   </div>
   <div :style="`height: ${navBarConfig.customNavBarHeight}px;`" />
   <scroll-view scroll-y :enable-back-to-top="true" :style="`height: calc(100vh - ${navBarConfig.customNavBarHeight}px);`">
-    <view class="page-container">
+    <view class="page-container" :class="{ 'create-mode': !isDetail }">
       <template v-if="isDetail">
         <view class="current-node-banner">
-          当前流程节点：{{ currentNode?.nodeName || currentNode?.nodeCode || '-' }}
+          <view class="current-node-summary">
+            <text class="current-node-name">{{ currentNode?.nodeName || currentNode?.nodeCode || '-' }}</text>
+            <text class="current-node-badge">当前节点</text>
+          </view>
+          <view class="current-node-action" @tap="openFlowStatus">
+            <text class="current-node-name">流程图</text>
+            <text class="current-node-badge">点击查看</text>
+          </view>
         </view>
 
-        <view class="section-card">
+        <work-order-share :form="form" :history-groups="actionHistoryGroups" />
+
+        <view class="section-card work-order-card">
+          <view
+            v-if="archivedSolutionStamp"
+            class="work-order-stamp"
+            :class="{ recovered: archivedSolutionStamp === '已恢复', loaded: stampLoaded }"
+          >
+            {{ archivedSolutionStamp }}
+          </view>
           <view class="section-title">
             工单信息
           </view>
@@ -29,7 +45,7 @@
             <text>联系人</text><text>{{ form.contactName || '-' }}</text>
           </view>
           <view class="info-row">
-            <text>联系电话</text><text>{{ form.contactPhone || '-' }}</text>
+            <text>联系电话</text><text @tap="callPhone(form.contactPhone)">{{ form.contactPhone || '-' }}</text>
           </view>
           <view class="info-row">
             <text>联系人说明</text><text>{{ form.contactRemark || '-' }}</text>
@@ -42,16 +58,17 @@
           </view>
         </view>
 
-        <view v-if="onsitePersons.length" class="section-card">
+        <view v-if="onsitePersons.length" class="section-card onsite-person-card">
           <view class="section-title">
             已选到场人员
           </view>
           <view v-for="person in onsitePersons" :key="person.userId" class="person-row">
-            {{ person.companyName || '-' }} / {{ person.name || '-' }} / {{ person.phoneNumber || '-' }}
+            <text>{{ person.companyName || '-' }} / {{ person.name || '-' }} / </text>
+            <text @tap.stop="callPhone(person.phoneNumber)">{{ person.phoneNumber || '-' }}</text>
           </view>
         </view>
 
-        <view v-if="canEdit" class="section-card">
+        <view v-if="canEdit" class="section-card action-card">
           <view class="section-title">
             本次处理
           </view>
@@ -162,7 +179,7 @@
             <wd-button block type="info" custom-style="margin-top: 12px;" :loading="scanning" @click="scanOnsiteCode">
               {{ onsiteCode ? '重新扫描现场维保码' : '扫描现场维保码' }}
             </wd-button>
-            <view v-if="onsiteCode" class="scan-result">
+            <view v-if="onsiteCode" class="scan-result" style="display: none;">
               维保码：{{ onsiteCode }}
             </view>
             <view v-if="location.longitude != null && location.latitude != null" class="scan-result">
@@ -182,19 +199,21 @@
                 未恢复，另行安排
               </wd-radio>
             </wd-radio-group>
+            <view class="field-title mt-3">
+              处理备注
+            </view>
             <wd-textarea
               v-model="actionForm.solutionRemark"
-              class="mt-3"
               :maxlength="1000"
               show-word-limit
               clearable
-              placeholder="请输入解决结果备注"
+              placeholder="请输入处理备注"
             />
           </view>
 
           <view v-if="currentNodeCode !== 'OWNER_ASSIGN' || ownerFlowMode === 'NEXT_NODE'" class="field-block">
             <view class="field-title">
-              本节点照片/视频
+              照片/视频
             </view>
             <wd-upload
               v-model:file-list="actionFileList"
@@ -203,6 +222,7 @@
               :reupload="false"
               :upload-method="customActionUpload"
               :show-limit-num="false"
+              custom-class="maintenance-media-upload"
               @before-upload="beforeUpload"
               @remove="deleteActionPic"
               @change="handleActionChange"
@@ -210,29 +230,32 @@
           </view>
 
           <view class="button-row">
-            <wd-button v-if="currentNodeCode === 'ONSITE_FINISH'" type="info" :loading="submitting" @click="submitAction('RETURN')">
+            <wd-button
+              v-if="currentNodeCode === 'ONSITE_FINISH' && actionForm.solutionResult === 2"
+              type="info"
+              :loading="submitting"
+              @click="submitAction(currentNodeCode === 'ONSITE_FINISH' ? 'RETURN' : 'SUBMIT')"
+            >
               退回负责人
             </wd-button>
             <wd-button
+              v-if="currentNodeCode !== 'ONSITE_FINISH' || actionForm.solutionResult === 1"
               type="primary"
               :loading="submitting"
               @click="submitAction(currentNodeCode === 'ONSITE_FINISH' ? 'ARCHIVE' : 'SUBMIT')"
             >
-              {{ currentNodeCode === 'ONSITE_FINISH' ? '归档工单' : '提交处理' }}
+              {{ currentNodeCode === 'ONSITE_FINISH' ? '归档工单' : '处理' }}
             </wd-button>
           </view>
         </view>
 
-        <view v-for="group in actionHistoryGroups" :key="group.key" class="section-card">
+        <view v-for="group in actionHistoryGroups" :key="group.key" class="section-card history-card">
           <view class="section-title">
             {{ group.label }}
           </view>
           <view v-if="group.actionType || group.handlerUserName" class="log-row">
-            <view>{{ group.actionType || '-' }} · {{ group.handlerUserName || '-' }}</view>
+            <view>{{ group.handlerUserName || '-' }} · {{ group.remark || '-' }}</view>
             <view>{{ group.createTime || '-' }}</view>
-            <view v-if="group.remark">
-              {{ group.remark }}
-            </view>
           </view>
           <view v-for="item in group.solutionResults" :key="item.key" class="field-block mt-3">
             <view class="field-title">
@@ -247,18 +270,21 @@
           </view>
           <view v-if="group.files.length" class="field-block mt-3">
             <view class="field-title">
-              本节点照片/视频
+              照片/视频
             </view>
-            <wd-upload :file-list="group.files" :limit="9" accept="media" disabled />
+            <wd-upload
+              :file-list="group.files"
+              :limit="9"
+              accept="media"
+              disabled
+              custom-class="maintenance-media-upload"
+            />
           </view>
         </view>
       </template>
 
       <template v-else>
         <view class="section-card">
-          <view class="section-title">
-            新建维保单
-          </view>
           <view class="field-title">
             选择项目
           </view>
@@ -267,10 +293,23 @@
               {{ selectedProject?.projectName || '请选择项目' }}
             </view>
           </picker>
-          <view v-if="selectedProject" class="contact-box">
-            <view>联系人：{{ selectedProject.contactName || '-' }}</view>
-            <view>联系电话：{{ selectedProject.contactPhone || '-' }}</view>
-            <view>联系人说明：{{ selectedProject.contactRemark || '-' }}</view>
+          <view class="field-title mt-3">
+            联系人
+          </view>
+          <view class="info-row">
+            <text>{{ selectedProject?.contactName || '-' }}</text>
+          </view>
+          <view class="field-title mt-3">
+            联系电话
+          </view>
+          <view class="info-row">
+            <text @tap="callPhone(selectedProject?.contactPhone)">{{ selectedProject?.contactPhone || '-' }}</text>
+          </view>
+          <view class="field-title mt-3">
+            联系人说明
+          </view>
+          <view class="readonly-text">
+            {{ selectedProject?.contactRemark || '-' }}
           </view>
           <view class="field-title mt-3">
             故障描述
@@ -292,6 +331,7 @@
             :reupload="false"
             :upload-method="customUpload"
             :show-limit-num="false"
+            custom-class="maintenance-media-upload"
             @before-upload="beforeUpload"
             @remove="deletePic"
             @change="handleChange"
@@ -304,7 +344,7 @@
               {{ selectedNextCandidateName || '请选择下一节点处理人' }}
             </view>
           </picker>
-          <wd-button block type="primary" :loading="submitting" custom-style="margin-top: 20px;" @click="createWorkOrder">
+          <wd-button block type="primary" :loading="submitting" custom-style="min-height: 46px; margin-top: 20px; border-radius: 10px; background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%); font-size: 16px; font-weight: 600;" @click="createWorkOrder">
             提交维保单
           </wd-button>
         </view>
@@ -312,16 +352,19 @@
     </view>
   </scroll-view>
   <wd-toast />
+  <flow-status-popup v-model="flowStatusVisible" :runtime="runtime" />
   <loadingBox :show="loading" />
 </template>
 
 <script setup>
-import { computed, inject, reactive, ref } from 'vue'
+import { computed, inject, nextTick, reactive, ref } from 'vue'
 import { useToast } from 'wot-design-uni'
 import { simpleLoginApi } from '@/api/login/simple-login-api.js'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
 import { useUserStore } from '@/store/user'
+import FlowStatusPopup from './components/flow-status-popup.vue'
+import WorkOrderShare from './components/work-order-share.vue'
 
 const navBarConfig = inject('navBarConfig')
 const apiUrl = import.meta.env.VITE_SERVER_BASEURL
@@ -345,6 +388,8 @@ const onsitePickerVisible = ref(false)
 const onsiteSearchKeyword = ref('')
 const onsiteCode = ref('')
 const scanning = ref(false)
+const flowStatusVisible = ref(false)
+const stampLoaded = ref(false)
 const initialized = ref(false)
 const location = reactive({ longitude: null, latitude: null })
 const runtime = reactive({ instance: null, nodes: [], actionLogs: [], form: {} })
@@ -358,6 +403,10 @@ const form = computed(() => detailForm.value.form || {})
 const files = computed(() => detailForm.value.files || [])
 const onsitePersons = computed(() => detailForm.value.onsitePersons || [])
 const solutionResults = computed(() => detailForm.value.solutionResults || [])
+const archivedSolutionStamp = computed(() => {
+  const lastResult = solutionResults.value[solutionResults.value.length - 1]?.solutionResult
+  return Number(lastResult) === 1 ? '已恢复' : Number(lastResult) === 2 ? '未恢复' : ''
+})
 const actionHistoryGroups = computed(() => {
   const filesByActionLog = new Map()
   const unlinkedFiles = []
@@ -387,7 +436,7 @@ const actionHistoryGroups = computed(() => {
     const node = nodesById.get(String(actionSolutions[0]?.nodeId || actionFiles[0]?.nodeId || log.nodeId))
     return {
       key: log.id || `action-${index}`,
-      label: `${node?.nodeName || log.nodeName || log.nodeType || '流程节点'}${log.roundNo ? `（第${log.roundNo}轮）` : ''}`,
+      label: `${node?.nodeName || log.nodeName || log.nodeType || '流程节点'}${Number(log.roundNo) > 1 ? `（第${log.roundNo}轮）` : ''}`,
       actionType: log.actionType,
       handlerUserName: log.handlerUserName,
       createTime: log.createTime,
@@ -415,7 +464,7 @@ const actionHistoryGroups = computed(() => {
   return groups
 })
 const currentNode = computed(() => (runtime.nodes || []).find(item => item.current))
-const currentNodeCode = computed(() => currentNode.value?.nodeCode || currentNode.value?.nodeType || '')
+const currentNodeCode = computed(() => currentNode.value?.nodeType || currentNode.value?.nodeCode || '')
 const canEdit = computed(() => runtime.instance?.status === 'RUNNING' && Number(runtime.instance?.currentHandlerUserId) === Number(currentUserId.value))
 const needsTargetUser = computed(() => currentNodeCode.value === 'CREATE' || currentNodeCode.value === 'OWNER_ASSIGN')
 const projectNames = computed(() => projects.value.map(item => item.projectName || item.name || '-'))
@@ -476,8 +525,12 @@ function resetActionState() {
 }
 
 async function initDetail() {
+  stampLoaded.value = false
   const result = await othersApi.workflowInstanceRuntime(instanceId.value)
   Object.assign(runtime, result || {})
+  await nextTick()
+  if (archivedSolutionStamp.value)
+    setTimeout(() => { stampLoaded.value = true }, 200)
   actionFileList.value = []
   fileList.value = files.value.map(item => ({ id: item.fileId, url: item.src, status: 'success' }))
   onsiteCode.value = detailForm.value.form?.onsiteMaintenanceCode || ''
@@ -524,6 +577,16 @@ async function init() {
 
 function selectProject(event) {
   selectedProject.value = projects.value[Number(event.detail.value)] || null
+}
+
+function openFlowStatus() {
+  if (isDetail.value)
+    flowStatusVisible.value = true
+}
+
+function callPhone(phoneNumber) {
+  if (phoneNumber)
+    uni.makePhoneCall({ phoneNumber: String(phoneNumber) })
 }
 
 function selectNextCandidate(event) {
@@ -587,6 +650,8 @@ async function createWorkOrder() {
     return toast.error({ msg: '请选择项目' })
   if (!createForm.faultDescription.trim())
     return toast.error({ msg: '请输入故障描述' })
+  if (!uploadedCodes().length)
+    return toast.error({ msg: '请上传图片或视频' })
   if (!selectedNextCandidateId.value)
     return toast.error({ msg: '请选择下一节点处理人' })
   submitting.value = true
@@ -598,6 +663,9 @@ async function createWorkOrder() {
       remark: '创建维保工单',
       form: {
         projectId: selectedProject.value.id,
+        contactName: selectedProject.value.contactName,
+        contactPhone: selectedProject.value.contactPhone,
+        contactRemark: selectedProject.value.contactRemark,
         faultDescription: createForm.faultDescription,
         fileCodes: uploadedCodes(),
       },
@@ -632,7 +700,7 @@ function buildActionForm() {
     payload.latitude = location.latitude
   }
   if (currentNodeCode.value === 'ONSITE_FINISH') {
-    if (actionForm.solutionResult) {
+    if (actionForm.solutionResult || actionForm.solutionRemark.trim()) {
       payload.solutionResult = actionForm.solutionResult
       payload.solutionRemark = actionForm.solutionRemark
     }
@@ -643,6 +711,8 @@ function buildActionForm() {
 async function submitAction(actionType) {
   if (submitting.value)
     return
+  if ((currentNodeCode.value !== 'OWNER_ASSIGN' || ownerFlowMode.value === 'NEXT_NODE') && !actionUploadedCodes().length)
+    return toast.error({ msg: '请上传图片或视频' })
   if (currentNodeCode.value === 'CREATE' && !selectedNextCandidateId.value)
     return toast.error({ msg: '请选择下一节点处理人' })
   if (actionType === 'RETURN' && !previousOwnerUserId.value)
@@ -664,15 +734,15 @@ async function submitAction(actionType) {
     if (location.longitude == null || location.latitude == null)
       return toast.error({ msg: '请获取当前位置' })
   }
-  if (currentNodeCode.value === 'ONSITE_FINISH' && actionForm.solutionResult === 2 && !actionForm.solutionRemark.trim())
-    return toast.error({ msg: '未恢复时请填写解决结果备注' })
+  if (currentNodeCode.value === 'ONSITE_FINISH' && !actionForm.solutionRemark.trim())
+    return toast.error({ msg: '请填写处理备注' })
   submitting.value = true
   try {
     const payload = {
       instanceId: Number(instanceId.value),
       openId,
       actionType,
-      remark: actionType === 'ARCHIVE' ? '归档工单' : '提交处理',
+      remark: actionType === 'ARCHIVE' ? '归档工单' : '处理',
       form: buildActionForm(),
     }
     if (actionType === 'RETURN') {
@@ -819,7 +889,7 @@ async function scanOnsiteCode() {
   scanning.value = true
   try {
     const scanResult = await new Promise((resolve, reject) => {
-      uni.scanCode({ onlyFromCamera: true, success: resolve, fail: reject })
+      uni.scanCode({ success: resolve, fail: reject })
     })
     const position = await getLocation()
     onsiteCode.value = scanResult.result || ''
@@ -854,6 +924,10 @@ onShow(async () => {
 
 <style lang="scss" scoped>
 @import './scss/maintenance.scss';
+
+:deep(.maintenance-media-upload .wd-upload__evoke.is-disabled) {
+  display: none !important;
+}
 </style>
 
 <style>
@@ -864,5 +938,38 @@ page {
     rgba(63, 169, 245, 0.1) 51.48%,
     rgba(0, 255, 255, 0.1) 82.82%
   );
+}
+
+.wd-textarea__count {
+  width: 60px;
+  justify-content: flex-end;
+}
+
+.maintenance-media-upload {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24rpx;
+}
+
+.maintenance-media-upload .wd-upload__preview,
+.maintenance-media-upload .wd-upload__evoke {
+  width: auto !important;
+  height: auto !important;
+  min-width: 0;
+  margin: 0 !important;
+  aspect-ratio: 1;
+  border-radius: 10px;
+}
+
+.maintenance-media-upload .wd-upload__preview .wd-upload__status-content,
+.maintenance-media-upload .wd-upload__evoke {
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.maintenance-media-upload .wd-upload__picture,
+.maintenance-media-upload .wd-upload__video,
+.maintenance-media-upload .wd-upload__file {
+  border-radius: inherit;
 }
 </style>

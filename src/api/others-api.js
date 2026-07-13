@@ -25,6 +25,9 @@ export const othersApi = {
   workflowInstanceProcessedListByOpenId: (openId) => {
     return getRequest(`/workflow/instance/list-processed-by-open-id`, { openId })
   },
+  workflowInstanceStatisticsByOpenId: (openId) => {
+    return getRequest(`/workflow/instance/statistics-by-open-id`, { openId })
+  },
   workflowInstanceStart: (params) => {
     return postRequest(`/workflow/instance`, params)
   },

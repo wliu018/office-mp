@@ -5,11 +5,62 @@
   background: #f8f9fa;
 }
 
-.section-title {
-  margin: 8px 0 12px;
+.statistics-card {
+  margin-bottom: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.statistics-title {
+  margin-bottom: 12px;
   color: #303032;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
+}
+
+.statistics-grid {
+  display: flex;
+  gap: 10px;
+}
+
+.statistics-item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px 12px;
+  border-radius: 10px;
+  background: #f5f6f8;
+  color: #999;
+  font-size: 14px;
+}
+
+.statistics-count {
+  color: #303032;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.statistics-item.pending .statistics-count {
+  color: #ff6600;
+}
+
+.statistics-item.processed .statistics-count {
+  color: #00b96b;
+}
+
+.statistics-item.all .statistics-count {
+  color: #0055ff;
+}
+
+.section-title {
+  margin: 10px 0 12px;
+  color: #303032;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .section-title-processed {
@@ -25,7 +76,8 @@
 .workflow-card {
   margin-bottom: 12px;
   padding: 16px;
-  border-radius: 8px;
+  border: 1px solid #edf0f5;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
@@ -34,20 +86,66 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   color: #303032;
   font-size: 16px;
   font-weight: 600;
 }
 
-.status {
-  color: #3d7dfe;
-  font-size: 13px;
-  font-weight: 400;
+.card-id {
+  font-size: 17px;
 }
 
-.card-row {
-  margin-top: 6px;
-  color: #666;
-  font-size: 13px;
+.status {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #0055ff;
+  opacity: 0.82;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.card-node {
+  margin-bottom: 12px;
+  padding: 9px 10px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f6f8fc;
+  color: #0055ff;
+  opacity: 0.82;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.card-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  color: #303032;
+  font-size: 14px;
+}
+
+.card-meta-item text:first-child {
+  color: #8b95a7;
+  font-size: 12px;
+}
+
+.card-meta-item text:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-meta-time {
+  grid-column: 1 / -1;
 }

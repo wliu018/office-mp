@@ -1,79 +1,3 @@
-.tickets {
-  padding: 30px 0 10px;
-  box-sizing: border-box;
-  filter: drop-shadow(0px 3px 3px rgba(0, 0, 0, 0.1));
-  position: relative;
-  background-color: rgba(255, 255, 255, 0.9);
-  z-index: 1;
-  .content {
-    padding: 0 20px;
-    min-height: 215px;
-    position: relative;
-    font-size: 3.5vw;
-    &::before {
-      content: '';
-      height: 1px;
-      background: linear-gradient(to right, #ececed 0%, #ececed 50%, transparent 50%);
-      background-size: 20px 1px;
-      position: absolute;
-      left: 3px;
-      right: 0;
-      bottom: 0;
-    }
-  }
-  .bot {
-    padding: 10px 10px 0;
-    display: flex;
-    align-items: center;
-    color: #999999;
-    gap: 5px;
-    font-size: 12px;
-  }
-}
-.tickets::before {
-  content: '';
-  position: absolute;
-  height: 10px;
-  width: calc(100% + 8px);
-  top: 0;
-  left: -4px;
-  background: #ececed;
-  border-radius: 99px;
-  opacity: 0.9;
-  z-index: -10;
-}
-
-.tickets::after {
-  content: '';
-  position: absolute;
-  height: 8px;
-  width: 100%;
-  top: 100%;
-  left: 0;
-  background: radial-gradient(circle at center bottom, transparent 7px, rgba(255, 255, 255, 0.9) 0) left center / 20px
-    8px repeat-x;
-}
-
-.normal-section {
-  padding: 50px 2vw 0;
-  padding-bottom: 20vw;
-  box-sizing: border-box;
-  margin: 0 auto;
-  width: 98%;
-}
-.normal-text-title {
-  font-size: 4vw;
-  color: rgba(61, 61, 61, 1);
-  font-weight: 700;
-  margin-bottom: 5vw;
-}
-.normal-text {
-  font-size: 3.6vw;
-  color: #a3a2a2;
-  text-align: justify;
-  line-height: 1.8;
-}
-
 .page-container {
   min-height: 100%;
   padding: 20px;
@@ -81,37 +5,157 @@
 }
 
 .current-node-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 14px;
-  padding: 14px 16px;
-  border-radius: 8px;
+}
+
+.current-node-summary,
+.current-node-action {
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+  padding: 0 16px;
+  border-radius: 4px;
   background: linear-gradient(115deg, #3d7dfe 8.4%, #6a59fe 52.29%, #9142ff 93.72%);
   color: #fff;
+}
+
+.current-node-summary {
+  position: relative;
+  flex: 1;
+}
+
+.current-node-action {
+  position: relative;
+  flex: 1;
+  justify-content: center;
+}
+
+.current-node-label {
+  font-size: 14px;
+  opacity: 0.82;
+}
+
+.current-node-name {
+  max-width: 100%;
+  overflow: hidden;
   font-size: 16px;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current-node-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 3px 7px;
+  border-radius: 0 4px 0 8px;
+  background: rgba(255, 255, 255, 0.24);
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 .section-card {
   margin-bottom: 14px;
-  padding: 16px;
-  border-radius: 8px;
+  padding: 18px 16px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
+.work-order-card {
+  position: relative;
+}
+
+.work-order-stamp {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  z-index: 1;
+  padding: 0.3em 0.45em;
+  border: solid 0.1em #999;
+  border-radius: 0.25em;
+  color: #999;
+  font-size: 25px;
+  font-weight: bold;
+  line-height: 1;
+  opacity: 0;
+  transform-origin: 50% 50%;
+  transform: rotate(-2deg) scale(5);
+  transition: all 0.5s cubic-bezier(0.6, 0.04, 0.98, 0.335);
+}
+
+.work-order-stamp.recovered {
+  border-color: #d00;
+  color: #d00;
+}
+
+.work-order-stamp.loaded {
+  opacity: 0.75;
+  transform: rotate(-15deg) scale(1);
+}
+
+.create-mode {
+  background: linear-gradient(
+    99deg,
+    rgba(255, 91, 145, 0.08) 2%,
+    rgba(63, 169, 245, 0.1) 51.48%,
+    rgba(58, 175, 246, 0.1) 57.25%,
+    rgba(46, 193, 248, 0.1) 65.5%,
+    rgba(25, 222, 251, 0.1) 74.57%,
+    rgba(0, 255, 255, 0.1) 82.82%
+  );
+}
+
+.create-mode .section-card {
+  position: relative;
+  margin: 10px 0 20px;
+  padding: 22px 16px 16px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 3px 3px rgba(0, 0, 0, 0.1);
+}
+
+.create-mode .section-card::before {
+  position: absolute;
+  top: -5px;
+  left: -4px;
+  width: calc(100% + 8px);
+  height: 10px;
+  border-radius: 99px;
+  background: #ececed;
+  content: '';
+}
+
+.create-mode .section-card::after {
+  position: absolute;
+  right: 0;
+  bottom: -8px;
+  left: 0;
+  height: 8px;
+  background: radial-gradient(circle at center bottom, transparent 7px, rgba(255, 255, 255, 0.9) 0) left center / 20px
+    8px repeat-x;
+  content: '';
+}
+
 .section-title {
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   color: #303032;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
+  line-height: 1.4;
 }
 
 .info-row,
 .person-row,
 .log-row {
-  padding: 7px 0;
+  padding: 9px 0;
   color: #666;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .info-row {
@@ -121,25 +165,33 @@
 }
 
 .info-row text:last-child {
+  max-width: 68%;
   color: #303032;
   text-align: right;
+}
+
+.info-row text:first-child {
+  flex: none;
+  color: #8b95a7;
 }
 
 .field-title {
   margin-bottom: 8px;
   color: #333;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .picker-value,
 .readonly-text,
 .contact-box {
-  padding: 10px 12px;
-  border-radius: 4px;
+  padding: 12px;
+  border: 1px solid #edf0f5;
+  border-radius: 8px;
   background: #f7f8fa;
   color: #555;
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.65;
 }
 
 .contact-box {
@@ -262,12 +314,43 @@
 
 .button-row :deep(.wd-button) {
   flex: 1;
+  min-height: 46px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .log-row {
-  border-bottom: 1px solid #f0f0f0;
+  padding: 12px;
+  border: 1px solid #edf0f5;
+  border-radius: 8px;
+  background: #f8f9fb;
 }
 
-.log-row:last-child {
-  border-bottom: 0;
+.history-card .section-title {
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #0055ff;
+  opacity: 0.82;
+  font-size: 15px;
+}
+
+.onsite-person-card .person-row {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f8f9fb;
+}
+
+.onsite-person-card .person-row + .person-row {
+  margin-top: 8px;
+}
+
+.action-card :deep(.wd-button) {
+  min-height: 46px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
 }

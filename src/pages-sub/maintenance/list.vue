@@ -13,7 +13,27 @@
     :style="`height: calc(100vh - ${navBarConfig.customNavBarHeight}px);`"
   >
     <view class="page-container">
-      <wd-button block custom-style="margin-bottom: 16px; background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%);" @click="createWorkOrder">
+      <view class="statistics-card">
+        <view class="statistics-title">
+          流程统计
+        </view>
+        <view class="statistics-grid">
+          <view class="statistics-item pending">
+            <text>待处理</text>
+            <text class="statistics-count">{{ statistics.pending }}</text>
+          </view>
+          <view class="statistics-item processed">
+            <text>已处理</text>
+            <text class="statistics-count">{{ statistics.processed }}</text>
+          </view>
+          <view class="statistics-item all">
+            <text>所有</text>
+            <text class="statistics-count">{{ statistics.all }}</text>
+          </view>
+        </view>
+      </view>
+
+      <wd-button v-if="canCreateWorkOrder" block custom-style="min-height: 46px; margin-bottom: 18px; border-radius: 10px; background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%); font-size: 16px; font-weight: 600;" @click="createWorkOrder">
         新建维保单
       </wd-button>
 
@@ -25,20 +45,21 @@
       </view>
       <view v-for="item in workflows" :key="item.id" class="workflow-card" @click="openWorkOrder(item.id)">
         <view class="card-title">
-          <text>流程 #{{ item.id }}</text>
-          <text class="status">{{ item.status || '-' }}</text>
+          <text class="card-id">#{{ item.id }} {{ item.projectName || '-' }}</text>
+          <text class="status">{{ (item.status === 'RUNNING' ? '待处理' : '已处理') }}</text>
         </view>
-        <view class="card-row">
-          业务类型：{{ item.bizType || '-' }}
+        <view class="card-node">
+          {{ item.currentNodeName || item.currentNodeId || '-' }}
         </view>
-        <view class="card-row">
-          当前节点：{{ item.currentNodeName || item.currentNodeId || '-' }}
-        </view>
-        <view class="card-row">
-          当前处理人：{{ item.currentHandlerName || '-' }}
-        </view>
-        <view class="card-row">
-          创建时间：{{ item.createTime || '-' }}
+        <view class="card-meta">
+          <view class="card-meta-item">
+            <text>当前处理人</text>
+            <text>{{ item.currentHandlerName || '-' }}</text>
+          </view>
+          <view class="card-meta-item">
+            <text>创建时间</text>
+            <text>{{ item.createTime || '-' }}</text>
+          </view>
         </view>
       </view>
 
@@ -50,20 +71,21 @@
       </view>
       <view v-for="item in processedWorkflows" :key="item.id" class="workflow-card" @click="openWorkOrder(item.id)">
         <view class="card-title">
-          <text>流程 #{{ item.id }}</text>
-          <text class="status">{{ item.status || '-' }}</text>
+          <text class="card-id">#{{ item.id }} {{ item.projectName || '-' }}</text>
+          <text class="status">{{ (item.status === 'RUNNING' ? '待处理' : '已处理') }}</text>
         </view>
-        <view class="card-row">
-          业务类型：{{ item.bizType || '-' }}
+        <view class="card-node">
+          {{ item.currentNodeName || item.currentNodeId || '-' }}
         </view>
-        <view class="card-row">
-          当前节点：{{ item.currentNodeName || item.currentNodeId || '-' }}
-        </view>
-        <view class="card-row">
-          当前处理人：{{ item.currentHandlerName || '-' }}
-        </view>
-        <view class="card-row">
-          创建时间：{{ item.createTime || '-' }}
+        <view class="card-meta">
+          <view class="card-meta-item">
+            <text>当前处理人</text>
+            <text>{{ item.currentHandlerName || '-' }}</text>
+          </view>
+          <view class="card-meta-item">
+            <text>创建时间</text>
+            <text>{{ item.createTime || '-' }}</text>
+          </view>
         </view>
       </view>
     </view>
@@ -73,6 +95,7 @@
 
 <script setup>
 import { inject, ref } from 'vue'
+import { simpleLoginApi } from '@/api/login/simple-login-api.js'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
 import { useUserStore } from '@/store/user'
@@ -82,6 +105,8 @@ const openId = useUserStore().openId
 const loading = ref(true)
 const workflows = ref([])
 const processedWorkflows = ref([])
+const statistics = ref({ pending: 0, processed: 0, all: 0 })
+const canCreateWorkOrder = ref(false)
 
 definePage({
   style: {
@@ -94,16 +119,22 @@ definePage({
 async function loadWorkflows() {
   loading.value = true
   try {
-    const [pending, processed] = await Promise.all([
+    const [pending, processed, result, isMarketPersonnel] = await Promise.all([
       othersApi.workflowInstanceListByOpenId(openId),
       othersApi.workflowInstanceProcessedListByOpenId(openId),
+      othersApi.workflowInstanceStatisticsByOpenId(openId),
+      simpleLoginApi.isMarketPersonnel({ openId }),
     ])
     workflows.value = pending || []
     processedWorkflows.value = processed || []
+    statistics.value = result || { pending: 0, processed: 0, all: 0 }
+    canCreateWorkOrder.value = isMarketPersonnel
   }
   catch (error) {
     workflows.value = []
     processedWorkflows.value = []
+    statistics.value = { pending: 0, processed: 0, all: 0 }
+    canCreateWorkOrder.value = false
     uni.showToast({ title: error?.message || '流程列表加载失败', icon: 'none' })
   }
   finally {

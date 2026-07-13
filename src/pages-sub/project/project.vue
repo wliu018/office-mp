@@ -6,79 +6,60 @@
       @click-left="uni.navigateBack()"
     />
   </div>
-  <div class="relative">
-    <!-- <swiper
-      :current="current" style="width: 100vw; height: 200px;"
-      :autoplay="true" :interval="3500" :circular="false"
-      :indicator-dots="false" indicator-color="rgba(255, 255, 255, 0.4)"
-      layout-type1="tinder"
-      indicator-active-color="rgba(255, 255, 255, 0.9)"
-    >
-      <swiper-item v-for="(item, index) in swiperList" :key="index">
-        <div class="relative h-full w-full">
-          <image :src="item" mode="cover" style="width: 100%; height: 100%" />
-        </div>
-      </swiper-item>
-    </swiper> -->
-    <!-- <wd-swiper v-model:current="current" :indicator="{ type: 'dots-bar' }" custom-item-class="!h-full" custom-style="--wot-swiper-radius: 0" :list="swiperList" autoplay /> -->
-  </div>
-  <div class="pb-10px">
-    <div class="box-border" style="--wot-search-input-height: 36px; --wot-search-input-radius: 6px">
-      <wd-search custom-class="!h-50px" custom-input-class="search-custom-class !h-36px !line-height-36px" placeholder="请输入项目/编号/市场" cancel-txt="搜索" @clear="getProjectList()" @cancel="searchProject" />
-    </div>
-  </div>
-  <div class="relative">
-    <scroll-view :scroll-y="scrollY" :enable-back-to-top="true" :style="`height: calc(100vh - ${navBarConfig.customNavBarHeight}px - 70px);`">
-      <view
-        class="container relative bg-[#f8f9fa]"
-      >
-        <wd-card
+  <scroll-view :scroll-y="scrollY" :enable-back-to-top="true" :style="`height: calc(100vh - ${navBarConfig.customNavBarHeight}px);`">
+    <view class="project-page">
+      <view class="search-panel">
+        <view class="search-copy">
+          <text class="search-heading">项目检索</text>
+          <text class="search-subtitle">快速定位项目编号、名称或市场</text>
+        </view>
+        <view class="search-box" style="--wot-search-input-height: 42px; --wot-search-input-radius: 8px">
+          <wd-search custom-input-class="search-custom-class" placeholder="请输入项目、编号或市场" cancel-txt="搜索" @clear="getProjectList()" @cancel="searchProject" />
+        </view>
+      </view>
+      <view class="project-list">
+        <view
           v-for="(item, index) in projectList"
           :key="index"
-          custom-class="wd-card-custom-class"
-          type="rectangle"
+          class="project-card-wrap"
+          @tap="selectProject(item, index)"
         >
-          <template #title>
-            <view class="title project-title">
-              <view class="flex flex-row items-center justify-between" style="width: 100%;">
-                <view class="flex flex-row items-center justify-between" style="color: rgba(0,0,0,0.85); width: 100%;">
-                  <view class="flex flex-row items-center pr-1">
-                    {{ item.serialNumber }}
-                    <wd-icon name="file-copy" color="rgba(0,0,0,0.1)" size="22px" @click="copyText(item.serialNumber)" />
-                  </view>
-
-                  <view class="">
-                    {{ item.marketing }}
-                  </view>
+          <wd-card
+            :custom-class="selectedProjectKey === projectKey(item, index) ? 'project-card project-card-selected' : 'project-card'"
+            :custom-style="cardStyle(item, index)"
+            type="rectangle"
+          >
+            <view class="project-card-content">
+              <view class="project-name-row">
+                <text class="project-name">{{ item.projectName || '-' }}</text>
+                <view class="copy-action" @tap.stop="copyText(item.projectName)">
+                  <wd-icon name="file-copy" color="#6b6b6b" size="15px" />
+                  <text>复制</text>
                 </view>
               </view>
+              <view class="project-code-row">
+                <text>项目编号：{{ item.serialNumber || '-' }}</text>
+                <view class="copy-action copy-code-action" @tap.stop="copyText(item.serialNumber)">
+                  <wd-icon name="file-copy" color="#929292" size="15px" />
+                  <text>复制</text>
+                </view>
+              </view>
+              <view class="project-market">
+                {{ item.marketing || '未标注市场' }}
+              </view>
             </view>
-          </template>
-          <view class="content">
-            <view class="flex flex-row items-center pr-1">
-              <span class="project-name"> {{ `${item.projectName}` }}</span>
-              <wd-icon name="file-copy" color="rgba(0,0,0,0.1)" size="20px" @click="copyText(item.projectName)" />
-            </view>
-          </view>
-          <!-- <template #footer>
-            <view class="flex flex-row items-center">
-              <view class="pr-1">
-                {{ item.marketing }}
-              </view> <wd-icon name="file-copy" color="rgba(0,0,0,0.1)" size="22px" @click="copyText(item.marketing)" />
-            </view>
-          </template> -->
-        </wd-card>
+          </wd-card>
+        </view>
       </view>
-    </scroll-view>
-  </div>
+    </view>
+  </scroll-view>
   <wd-toast />
   <globalLoading :show="globalLoadingShow" />
   <loadingBox :show="wdLoading" />
 </template>
 
 <script setup>
-import dayjs from 'dayjs'
-import { inject, nextTick, onMounted, reactive, ref } from 'vue'
+import { inject, onMounted, ref } from 'vue'
 import { useToast } from 'wot-design-uni'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
@@ -86,24 +67,12 @@ import globalLoading from '@/components/global-loading.vue'
 import { useUserStore } from '@/store/user'
 
 // 注入全局属性
-const navBarConfig = inject('navBarConfig')
+const navBarConfig = inject('navBarConfig', { customNavBarHeight: 0 })
 
 const openId = useUserStore().openId
 const toast = useToast()
 const globalLoadingShow = ref(false)
 const wdLoading = ref(true)
-
-// 轮播图数据
-const swiperList = ref([
-  '/pages-sub/static/images/study-1.jpg',
-  '/pages-sub/static/images/study-1-1.jpg',
-  '/pages-sub/static/images/3-202410161440198281.jpg',
-  '/pages-sub/static/images/202411211002593667.jpg',
-  '/pages-sub/static/images/2-202410171538317624.jpg',
-])
-
-// 当前轮播图索引
-const current = ref(0)
 
 definePage({
   style: {
@@ -116,28 +85,38 @@ definePage({
     sdkVersionEnd: '15.255.255',
   },
 })
-// ---------------------
-const titleHeight = ref(0)
-const menuButtonInfo = uni.getMenuButtonBoundingClientRect()
-const sysInfo = uni.getSystemInfoSync()
-const navBarHeight = menuButtonInfo.top + menuButtonInfo.height + (sysInfo.statusBarHeight - menuButtonInfo.top) * 2
-titleHeight.value = navBarHeight
-titleHeight.value = sysInfo.statusBarHeight * 2
-
 const scrollY = ref(true)
 const projectList = ref([])
+const selectedProjectKey = ref(null)
+
+function projectKey(item, index) {
+  return String(item?.id ?? item?.serialNumber ?? index)
+}
+
+function cardStyle(item, index) {
+  const selected = selectedProjectKey.value === projectKey(item, index)
+  return `border: 1px solid ${selected ? '#3f3f3f' : '#e5e5e5'}; border-radius: 16px; overflow: hidden;`
+}
+
+function selectProject(item, index) {
+  selectedProjectKey.value = projectKey(item, index)
+}
+
 async function getProjectList(keywords = '', loading = true) {
   if (loading)
     wdLoading.value = true
   try {
     const res = await othersApi.projectList({ openId, keywords })
     console.log(res)
-    projectList.value = res
-    if (loading)
-      wdLoading.value = false
+    projectList.value = res || []
+    selectedProjectKey.value = projectList.value.length ? projectKey(projectList.value[0], 0) : null
   }
   catch (error) {
     toast.error(error.message)
+  }
+  finally {
+    if (loading)
+      wdLoading.value = false
   }
 }
 function pageInit() {
@@ -167,7 +146,7 @@ onMounted(() => {
 
 <style>
 page {
-  background: #f8f9fa;
+  background: #fff;
 }
 @keyframes slowRotate {
   0% {

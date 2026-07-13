@@ -49,9 +49,7 @@ const defaultCustomRouteConfig = {
 
 // 轮播图数据
 const swiperList = ref([
-  '/static/images/index/ad4.png',
   '/static/images/index/ad2.jpg',
-  '/static/images/index/ad3.png',
 ])
 
 // 当前轮播图索引
@@ -287,7 +285,7 @@ function go2details(i) {
 </script>
 
 <template>
-  <div class="content-wrapper min-h-[100vh] flex flex-col items-center">
+  <div class="content-wrapper home-page min-h-[100vh] flex flex-col items-center">
     <swiper
       :current="current" style="width: 100vw; height: 30vh;"
       :autoplay="true" :interval="2500" :circular="false"
@@ -371,7 +369,7 @@ function go2details(i) {
     </div> -->
       <scroll-view :scroll-y="true" :enable-back-to-top="true" style="height: calc(100vh - 30vh - 102px);">
         <div style="padding-bottom: calc(10vh + 2vh);" class="index-content-wrapper">
-          <div class="section-wrapper box-border p-[20px]">
+          <div class="section-wrapper box-border">
             <div class="section-title font-bold">
               会议室预订记录
               <div class="more flex flex-row items-center" @tap="moreDetails(1)">
@@ -398,7 +396,7 @@ function go2details(i) {
               <wd-status-tip v-else image="content" tip="暂无内容" />
             </div>
           </div>
-          <div class="section-wrapper box-border p-[20px]">
+          <div class="section-wrapper box-border">
             <div class="section-title font-bold">
               停车券领取记录
               <div class="more flex flex-row items-center" @tap="moreDetails(2)">
@@ -406,7 +404,7 @@ function go2details(i) {
               </div>
             </div>
             <template v-if="ticketRecord.length > 0">
-              <wd-cell-group v-for="(item, index) in ticketRecord" :key="index" border custom-style="width: calc(100%-40px)">
+              <wd-cell-group v-for="(item, index) in ticketRecord" :key="index" border custom-style="width: 100%;">
                 <wd-cell :title="`${item.license_plate_number}`" is-link @tap="checkCoupon(item)">
                   {{ item.create_time }}
                 </wd-cell>

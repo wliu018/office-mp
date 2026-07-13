@@ -1,14 +1,146 @@
-.project-name {
-  font-size: 16px;
-  font-weight: bold;
-  color: #111;
-  background1: linear-gradient(
-    transparent 0,
-    transparent 66%,
-    rgba(246, 166, 35, 0.3) 67%,
-    rgba(246, 166, 35, 0.5) 100%
-  );
+.project-page {
+  min-height: 100%;
+  background: #fff;
 }
 
-.project-title {
+.search-panel {
+  margin: 58px 25px 20px;
+  padding: 0;
+  background: #fff;
+}
+
+.search-copy {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 18px;
+}
+
+.search-heading {
+  color: #1b1b1b;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.search-subtitle {
+  margin-top: 10px;
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+.search-box {
+  height: 48px;
+}
+
+.project-list {
+  min-height: 100%;
+  padding: 0 25px 32px;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.project-card-wrap {
+  margin-bottom: 12px;
+}
+
+:deep(.project-card) {
+  margin-bottom: 0;
+  overflow: hidden;
+  border: 1px solid #e5e5e5;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: none;
+}
+
+:deep(.project-card-selected) {
+  border-color: #3f3f3f !important;
+}
+
+:deep(.project-card .wd-card__content) {
+  padding: 0;
+}
+
+.project-card-content {
+}
+
+.project-name-row,
+.project-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.project-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #1f1f1f;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-code-row {
+  margin-top: 8px;
+  color: #929292;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.project-code-row > text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-market {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #eefbf2;
+  color: #8fcea1;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.copy-action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  color: #6b6b6b;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.copy-code-action {
+  color: #929292;
+}
+
+:deep(.wd-navbar__title) {
+  color: #1b1b1b;
+}
+
+:deep(.wd-search) {
+  padding: 0;
+  background: transparent;
+}
+
+:deep(.wd-search__input) {
+  border: 1px solid #e5e5e5;
+  background: #fafafa;
+}
+
+:deep(.wd-search__input input) {
+  color: #1f1f1f;
+}
+
+:deep(.wd-search__cancel) {
+  margin-left: 10px;
+  color: #1f1f1f;
+  font-size: 14px;
 }
