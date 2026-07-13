@@ -25,7 +25,7 @@
           </view>
         </view>
 
-        <work-order-share :form="form" :history-groups="actionHistoryGroups" />
+        <work-order-share v-if="isArchived" :form="form" :history-groups="actionHistoryGroups" />
 
         <view class="section-card work-order-card">
           <view
@@ -403,6 +403,7 @@ const form = computed(() => detailForm.value.form || {})
 const files = computed(() => detailForm.value.files || [])
 const onsitePersons = computed(() => detailForm.value.onsitePersons || [])
 const solutionResults = computed(() => detailForm.value.solutionResults || [])
+const isArchived = computed(() => runtime.instance?.status === 'ARCHIVED')
 const archivedSolutionStamp = computed(() => {
   const lastResult = solutionResults.value[solutionResults.value.length - 1]?.solutionResult
   return Number(lastResult) === 1 ? '已恢复' : Number(lastResult) === 2 ? '未恢复' : ''
