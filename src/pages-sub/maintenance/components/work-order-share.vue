@@ -1,6 +1,6 @@
 <template>
   <view class="work-order-share">
-    <wd-button size="small" plain type="primary" :loading="generating" @click="previewShareImage">
+    <wd-button type="primary" custom-class="share-work-order-button" :loading="generating" @click="previewShareImage">
       分享工单
     </wd-button>
     <canvas :id="canvasId" type="2d" class="share-canvas" />
@@ -13,6 +13,8 @@ import { getCurrentInstance, nextTick, ref } from 'vue'
 const props = defineProps({
   form: { type: Object, default: () => ({}) },
   historyGroups: { type: Array, default: () => [] },
+  createdAt: { type: String, default: '' },
+  miniappCode: { type: String, default: '' },
 })
 
 const instance = getCurrentInstance()
@@ -21,7 +23,19 @@ const generating = ref(false)
 const width = 750
 const padding = 32
 const contentWidth = width - padding * 2
+const shareTime = ref('')
 let canvas
+
+function loadImage(canvasInstance, source) {
+  if (!source)
+    return Promise.resolve(null)
+  return new Promise((resolve) => {
+    const image = canvasInstance.createImage()
+    image.onload = () => resolve(image)
+    image.onerror = () => resolve(null)
+    image.src = source
+  })
+}
 
 function getCanvas() {
   if (canvas)
@@ -76,7 +90,17 @@ function isShareableResult(item) {
     || Boolean(String(item?.solutionRemark || '').trim())
 }
 
-function render(ctx, draw) {
+function formatTime(value) {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value))
+    return value
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime()))
+    return '-'
+  const pad = number => String(number).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+function render(ctx, draw, miniappCodeImage) {
   let y = padding
   const lineHeight = 36
   const cardGap = 24
@@ -132,11 +156,11 @@ function render(ctx, draw) {
     background.addColorStop(1, '#F4F7FC')
     ctx.fillStyle = background
     ctx.fillRect(0, 0, width, 20000)
-    const header = ctx.createLinearGradient(0, 0, width, 132)
+    const header = ctx.createLinearGradient(0, 0, width, 170)
     header.addColorStop(0, '#3D7DFE')
     header.addColorStop(0.55, '#6A59FE')
     header.addColorStop(1, '#9142FF')
-    roundedRect(ctx, padding, y, contentWidth, 132, 24)
+    roundedRect(ctx, padding, y, contentWidth, 170, 24)
     ctx.fillStyle = header
     ctx.fill()
     ctx.fillStyle = 'rgba(255, 255, 255, 0.16)'
@@ -145,12 +169,13 @@ function render(ctx, draw) {
     ctx.fill()
     ctx.fillStyle = '#FFFFFF'
     ctx.font = 'bold 38px sans-serif'
-    ctx.fillText('维保工单', padding + 28, y + 56)
+    ctx.fillText('维保工单', padding + 28, y + 54)
     ctx.fillStyle = 'rgba(255, 255, 255, 0.78)'
-    ctx.font = '24px sans-serif'
-    ctx.fillText('工单信息与处理记录', padding + 28, y + 94)
+    ctx.font = '20px sans-serif'
+    ctx.fillText(`创建时间：${formatTime(props.createdAt)}`, padding + 28, y + 96)
+    ctx.fillText(`分享时间：${shareTime.value || '-'}`, padding + 28, y + 128)
   }
-  y += 156
+  y += 194
 
   card('工单信息', (shouldDraw) => {
     const fields = [
@@ -237,6 +262,19 @@ function render(ctx, draw) {
     }, '#8B5CF6')
   })
 
+  if (miniappCodeImage) {
+    const codeSize = 180
+    y += 20
+    if (draw) {
+      ctx.fillStyle = '#35415A'
+      ctx.font = '24px sans-serif'
+      const label = '维保工单码'
+      ctx.fillText(label, (width - ctx.measureText(label).width) / 2, y + 24)
+      ctx.drawImage(miniappCodeImage, (width - codeSize) / 2, y + 46, codeSize, codeSize)
+    }
+    y += codeSize + 70
+  }
+
   return y - cardGap + padding
 }
 
@@ -260,14 +298,16 @@ async function previewShareImage() {
   generating.value = true
   try {
     await nextTick()
+    shareTime.value = formatTime(new Date())
     const canvasInstance = await getCanvas()
     const ctx = canvasInstance.getContext('2d')
+    const miniappCodeImage = await loadImage(canvasInstance, props.miniappCode)
     const pixelRatio = Math.min(3, Math.max(1, uni.getSystemInfoSync().pixelRatio || 1))
-    const height = Math.ceil(render(ctx, false))
+    const height = Math.ceil(render(ctx, false, miniappCodeImage))
     canvasInstance.width = width * pixelRatio
     canvasInstance.height = height * pixelRatio
     ctx.scale(pixelRatio, pixelRatio)
-    render(ctx, true)
+    render(ctx, true, miniappCodeImage)
     const path = await exportImage(canvasInstance, pixelRatio, height)
     uni.previewImage({ urls: [path], current: path })
   }
@@ -282,8 +322,8 @@ async function previewShareImage() {
 
 <style scoped>
 .work-order-share {
-  margin-bottom: 14px;
-  text-align: right;
+  display: flex;
+  justify-content: center;
 }
 
 .share-canvas {

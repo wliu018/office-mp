@@ -72,6 +72,7 @@ const rootParams = reactive({ type: 'fade', duration: 350, closedElevation: 0, c
 
 // ---------------------- 生命周期函数 ------------------------
 const surplusTicket = ref(0)
+const maintenancePending = ref(0)
 const ticketRecord = ref([])
 const reserveList = ref([])
 onShow(async () => {
@@ -79,6 +80,11 @@ onShow(async () => {
   othersApi.surplusTicket().then((res) => {
     surplusTicket.value = res
     console.log('剩余票数:', res)
+  })
+  othersApi.workflowInstanceStatisticsByOpenId(useUserStore().openId).then((res) => {
+    maintenancePending.value = res?.pending || 0
+  }).catch(() => {
+    maintenancePending.value = 0
   })
   othersApi.getTicketRecord({ openId: useUserStore().openId }).then((res) => {
     ticketRecord.value = res
@@ -111,18 +117,15 @@ onPullDownRefresh(() => {
 })
 
 // ------------ 业务逻辑 ------------
-function appointment() {
-  const params = {
-    id: 3,
-    routeType: 'wx://zoom',
-    nextRouteType: 'wx://zoom',
-    fullscreen: 1,
-    content: 'Zoom',
-  }
+function navigateWithZoom(url) {
   wx.navigateTo({
-    url: `/pages/reserve/reserve`,
-    routeType: params.routeType,
+    url,
+    routeType: 'wx://zoom',
   })
+}
+
+function appointment() {
+  navigateWithZoom('/pages/reserve/reserve')
 }
 
 function project() {
@@ -138,11 +141,8 @@ function parkingCoupon(item) {
   })
 }
 
-function maintenance(item) {
-  wx.navigateTo({
-    url: `/pages-sub/maintenance/list`,
-    routeType: 'wx://zoom',
-  })
+function maintenance() {
+  navigateWithZoom('/pages-sub/maintenance/list')
 }
 
 function checkCoupon(item) {
@@ -330,7 +330,7 @@ function go2details(i) {
       </open-container>
 
       <div class="menu-item" @tap="maintenance">
-        <wd-badge :model-value="surplusTicket" show-zero>
+        <wd-badge :model-value="maintenancePending" show-zero>
           <image src="/static/images/index/signIn-3.png" mode="widthFix" />
         </wd-badge>
         <div class="menu-name">

@@ -72,7 +72,18 @@
                 :rules="[{ required: true, message: '请填写姓名' }]"
               />
 
-              <wd-cell style="--wot-cell-padding: 12px" width="100px" title="部门" size="large" required prop="department">
+              <wd-input
+                v-model="model.companyName"
+                label="公司"
+                label-width="100px"
+                size="large"
+                prop="companyName"
+                custom-input-class="username-custom-input-class"
+                :disabled="type !== 0"
+                :rules="[{ required: true, message: '请填写公司' }]"
+              />
+
+              <wd-cell v-if="model.companyName === '丝路视觉'" style="--wot-cell-padding: 12px" width="100px" title="部门" size="large" required prop="department">
                 <picker :value="model.department" :disabled="type !== 0" :range="departmentList" range-key="name" @change="bindPickerChange($event)">
                   <view class="picker text-align-left">
                     <view class="!text-right" :class="[type !== 0 ? '!text-[#C5C5C5]' : '', departmentList[model.department] ? '' : '']">
@@ -83,47 +94,44 @@
                 </picker>
               </wd-cell>
 
-              <wd-cell
-                v-for="(item, index) in model.code"
-                :key="item.key"
-                :value="item.value"
-                :title="`车牌号${index + 1}`"
-                :prop="`code.${index}.value`"
-                label-width="100px"
-                size="large" is-link @click="showKeyBoard2(index)"
-              />
-              <wd-keyboard
-                v-for="(item, index) in model.code"
-                :key="item.key" v-model="item.value" v-model:visible="item.visible"
-                custom-style1="margin-bottom: 100px;" :modal="true"
-                root-portal mode="car" auto-switch-lang @input="onInput(index, $event)" @delete="onDelete(index, $event)"
-              />
-              <wd-cell title-width="0px">
-                <view class="footer">
-                  <wd-button size="small" type="info" icon="add-circle1" @click="addCode">
-                    添加车牌号
-                  </wd-button>
-                  <wd-button size="small" type="info" icon="minus-circle" @click="removeCode">
-                    删除
-                  </wd-button>
-                </view>
-              </wd-cell>
-              <wd-cell title-width="0px">
+              <template v-if="showLicensePlates">
+                <wd-cell
+                  v-for="(item, index) in model.code"
+                  :key="item.key"
+                  :value="item.value"
+                  :title="`车牌号${index + 1}`"
+                  :prop="`code.${index}.value`"
+                  label-width="100px"
+                  size="large" is-link @click="showKeyBoard2(index)"
+                />
+                <wd-keyboard
+                  v-for="(item, index) in model.code"
+                  :key="item.key" v-model="item.value" v-model:visible="item.visible"
+                  custom-style1="margin-bottom: 100px;" :modal="true"
+                  root-portal mode="car" auto-switch-lang @input="onInput(index, $event)" @delete="onDelete(index, $event)"
+                />
+                <wd-cell title-width="0px">
+                  <view class="footer">
+                    <wd-button size="small" type="info" icon="add-circle1" @click="addCode">
+                      添加车牌号
+                    </wd-button>
+                    <wd-button size="small" type="info" icon="minus-circle" @click="removeCode">
+                      删除
+                    </wd-button>
+                  </view>
+                </wd-cell>
+              </template>
+              <wd-cell v-if="type === 0" title-width="0px">
                 <div class="flex items-center p-[20px] pl-0 pr-0">
                   <div
                     class="align-center w-full flex justify-center pl-[10px]"
                   >
                     <wd-button
-                      v-if="type === 0"
                       icon="check-circle-filled" custom-class="submit-btn !w-[80%] !h-[45px]" custom-style="background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%);"
                       open-type="getPhoneNumber"
                       @getphonenumber="getphonenumber"
                     >
                       提交认证
-                    </wd-button>
-
-                    <wd-button v-else icon="check-circle-filled" custom-class="submit-btn !w-[80%] !h-[45px]" custom-style="background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%);" @click="submit">
-                      保存修改
                     </wd-button>
                   </div>
                 </div>
@@ -173,6 +181,7 @@ export default {
     return {
       wdLoading: true,
       showAuth: false,
+      showLicensePlates: false,
       avatar: '/static/images/avatar.png',
       name: '',
       type: 0,
@@ -182,6 +191,7 @@ export default {
       contactEdit: false,
       model: {
         name: '',
+        companyName: '丝路视觉',
         department: '',
         openId,
         code: [
@@ -247,7 +257,8 @@ export default {
         if (valid.valid) {
           console.log('submit', valid)
           console.log('submit', this.model)
-          if (!this.model.department) {
+          const department = this.departmentList[this.model.department]?.name || ''
+          if (this.model.companyName === '丝路视觉' && !department) {
             uni.showToast({
               title: '请选择部门',
               duration: 1000,
@@ -256,7 +267,6 @@ export default {
             return
           }
           const licensePlates = this.model.code.map(i => i.value).filter(i => i !== '')
-          const department = this.departmentList[this.model.department].name
           const params = { ...this.model, code: licensePlates, department }
           console.log('params', params)
           const result = await simpleLoginApi.updateEmployeeInfo(params)
@@ -367,6 +377,7 @@ export default {
       const {
         src,
         name,
+        companyName,
         department,
         type,
         licensePlates,
@@ -378,6 +389,7 @@ export default {
       if (name) {
         this.model.name = name
       }
+      this.model.companyName = companyName || '丝路视觉'
       if (department) {
         this.model.department = this.departmentList.findIndex(i => i.name === department)
       }

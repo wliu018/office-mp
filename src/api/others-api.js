@@ -34,6 +34,9 @@ export const othersApi = {
   workflowInstanceRuntime: (instanceId) => {
     return getRequest(`/workflow/instance/${instanceId}/runtime`)
   },
+  workflowInstanceMiniappCode: (instanceId) => {
+    return getRequest(`/workflow/instance/${instanceId}/miniapp-code`)
+  },
   workflowInstanceSubmit: (params) => {
     return postRequest(`/workflow/instance/submit`, params)
   },

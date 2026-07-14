@@ -14,20 +14,7 @@
   <scroll-view scroll-y :enable-back-to-top="true" :style="`height: calc(100vh - ${navBarConfig.customNavBarHeight}px);`">
     <view class="page-container" :class="{ 'create-mode': !isDetail }">
       <template v-if="isDetail">
-        <view class="current-node-banner">
-          <view class="current-node-summary">
-            <text class="current-node-name">{{ currentNode?.nodeName || currentNode?.nodeCode || '-' }}</text>
-            <text class="current-node-badge">当前节点</text>
-          </view>
-          <view class="current-node-action" @tap="openFlowStatus">
-            <text class="current-node-name">流程图</text>
-            <text class="current-node-badge">点击查看</text>
-          </view>
-        </view>
-
-        <work-order-share v-if="isArchived" :form="form" :history-groups="actionHistoryGroups" />
-
-        <view class="section-card work-order-card">
+        <view class="section-card work-order-card" :class="{ 'has-miniapp-code': showMiniappCode }">
           <view
             v-if="archivedSolutionStamp"
             class="work-order-stamp"
@@ -35,20 +22,23 @@
           >
             {{ archivedSolutionStamp }}
           </view>
-          <view class="section-title">
-            工单信息
+          <view class="work-order-heading">
+            <view class="section-title">
+              工单信息
+            </view>
+            <view class="work-order-tags">
+              <view class="work-order-tag">
+                <wd-icon name="error-circle-filled" size="15px" color="#3d8dff" />
+                <text>{{ currentNode?.nodeName || currentNode?.nodeCode || '-' }}</text>
+              </view>
+              <view class="work-order-tag" @tap="openFlowStatus">
+                <wd-icon name="transfer" size="15px" color="#36bd69" />
+                <text>查看流程图</text>
+              </view>
+            </view>
           </view>
           <view class="info-row">
             <text>项目</text><text>{{ form.projectName || '-' }}</text>
-          </view>
-          <view class="info-row">
-            <text>联系人</text><text>{{ form.contactName || '-' }}</text>
-          </view>
-          <view class="info-row">
-            <text>联系电话</text><text @tap="callPhone(form.contactPhone)">{{ form.contactPhone || '-' }}</text>
-          </view>
-          <view class="info-row">
-            <text>联系人说明</text><text>{{ form.contactRemark || '-' }}</text>
           </view>
           <view class="field-title">
             故障描述
@@ -56,6 +46,37 @@
           <view class="readonly-text">
             {{ form.faultDescription || '-' }}
           </view>
+          <view class="info-row contact-info-row">
+            <text>联系说明</text><text>{{ form.contactRemark || '-' }}</text>
+          </view>
+          <view class="info-row contact-info-row">
+            <text>联系电话</text>
+            <template v-if="form.contactPhone">
+              <view class="phone-action" @tap="callPhone(form.contactPhone)">
+                <wd-icon name="phone" size="14px" color="#5b8def" />
+                <text>{{ form.contactPhone }}</text>
+              </view>
+            </template>
+            <text v-else>-</text>
+          </view>
+          <view class="info-row contact-info-row">
+            <text>联系人</text><text>{{ form.contactName || '-' }}</text>
+          </view>
+          <view v-if="showMiniappCode" class="work-order-miniapp-code">
+            <image :src="miniappCode" mode="aspectFit" />
+            <view class="work-order-miniapp-code-label">
+              维保工单码
+            </view>
+          </view>
+        </view>
+
+        <view v-if="isArchived" class="work-order-share-below">
+          <work-order-share
+            :form="form"
+            :history-groups="actionHistoryGroups"
+            :created-at="runtime.instance?.createTime"
+            :miniapp-code="miniappCode"
+          />
         </view>
 
         <view v-if="onsitePersons.length" class="section-card onsite-person-card">
@@ -63,8 +84,19 @@
             已选到场人员
           </view>
           <view v-for="person in onsitePersons" :key="person.userId" class="person-row">
-            <text>{{ person.companyName || '-' }} / {{ person.name || '-' }} / </text>
-            <text @tap.stop="callPhone(person.phoneNumber)">{{ person.phoneNumber || '-' }}</text>
+            <view class="person-avatar">
+              {{ (person.name || '-').slice(0, 1) }}
+            </view>
+            <view class="person-info">
+              <text class="person-name">{{ person.name || '-' }}</text>
+              <view class="person-contact">
+                <text>{{ person.companyName || '-' }}</text>
+                <view class="person-phone phone-action" @tap.stop="callPhone(person.phoneNumber)">
+                  <wd-icon name="phone" size="14px" color="#5b8def" />
+                  <text>{{ person.phoneNumber || '-' }}</text>
+                </view>
+              </view>
+            </view>
           </view>
         </view>
 
@@ -79,7 +111,15 @@
             </view>
             <picker mode="selector" :range="nextCandidateNames" @change="selectNextCandidate">
               <view class="picker-value">
-                {{ selectedNextCandidateName || '请选择处理人' }}
+                <template v-if="selectedNextCandidateName">
+                  {{ selectedNextCandidateName }}
+                </template>
+                <view v-else class="picker-placeholder">
+                  <view class="picker-add-icon">
+                    <wd-icon name="add" color="#fff" size="12px" />
+                  </view>
+                  <text>请选择处理人</text>
+                </view>
               </view>
             </picker>
           </view>
@@ -99,14 +139,30 @@
             <view v-if="ownerFlowMode === 'SELF_LOOP'" class="field-block mt-3">
               <picker mode="selector" :range="ownerCandidateNames" @change="selectOwnerTarget">
                 <view class="picker-value">
-                  {{ selectedOwnerTargetName || '请选择负责人' }}
+                  <template v-if="selectedOwnerTargetName">
+                    {{ selectedOwnerTargetName }}
+                  </template>
+                  <view v-else class="picker-placeholder">
+                    <view class="picker-add-icon">
+                      <wd-icon name="add" color="#fff" size="12px" />
+                    </view>
+                    <text>请选择负责人</text>
+                  </view>
                 </view>
               </picker>
             </view>
             <view v-else class="field-block mt-3">
               <picker mode="selector" :range="nextCandidateNames" @change="selectNextCandidate">
                 <view class="picker-value">
-                  {{ selectedNextCandidateName || '请选择处理人' }}
+                  <template v-if="selectedNextCandidateName">
+                    {{ selectedNextCandidateName }}
+                  </template>
+                  <view v-else class="picker-placeholder">
+                    <view class="picker-add-icon">
+                      <wd-icon name="add" color="#fff" size="12px" />
+                    </view>
+                    <text>请选择处理人</text>
+                  </view>
                 </view>
               </picker>
             </view>
@@ -119,7 +175,12 @@
             <view v-if="onsiteCandidates.length" class="onsite-picker" @click="openOnsitePicker">
               <view class="onsite-picker-summary">
                 <text v-if="selectedPlannedOnsiteUserIds.length" class="onsite-picker-count">已选择 {{ selectedPlannedOnsiteUserIds.length }} 人</text>
-                <text v-else class="onsite-picker-placeholder">请选择计划到场人员</text>
+                <view v-else class="picker-placeholder">
+                  <view class="picker-add-icon">
+                    <wd-icon name="add" color="#fff" size="12px" />
+                  </view>
+                  <text>请选择计划到场人员</text>
+                </view>
                 <text class="onsite-picker-arrow">›</text>
               </view>
               <view v-if="selectedPlannedOnsiteNames" class="onsite-picker-names">
@@ -177,9 +238,10 @@
 
           <view v-if="currentNodeCode === 'ONSITE_ARRIVE'" class="field-block">
             <wd-button block type="info" custom-style="margin-top: 12px;" :loading="scanning" @click="scanOnsiteCode">
+              <wd-icon name="scan" color="#37C062" size="18px" custom-style="margin-right: 6px;" />
               {{ onsiteCode ? '重新扫描现场维保码' : '扫描现场维保码' }}
             </wd-button>
-            <view v-if="onsiteCode" class="scan-result" style="display: none;">
+            <view v-if="onsiteCode" class="scan-result">
               维保码：{{ onsiteCode }}
             </view>
             <view v-if="location.longitude != null && location.latitude != null" class="scan-result">
@@ -192,10 +254,10 @@
               解决结果
             </view>
             <wd-radio-group v-model="actionForm.solutionResult" inline shape="dot">
-              <wd-radio :value="1">
+              <wd-radio :value="1" size="large">
                 已恢复，保持观察
               </wd-radio>
-              <wd-radio :value="2">
+              <wd-radio :value="2" size="large">
                 未恢复，另行安排
               </wd-radio>
             </wd-radio-group>
@@ -204,10 +266,13 @@
             </view>
             <wd-textarea
               v-model="actionForm.solutionRemark"
+              custom-textarea-class="compact-textarea"
+              style="background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.025); border-radius: 8px;"
               :maxlength="1000"
               show-word-limit
               clearable
               placeholder="请输入处理备注"
+              placeholder-style="color: #bfbfbf;"
             />
           </view>
 
@@ -241,6 +306,7 @@
             <wd-button
               v-if="currentNodeCode !== 'ONSITE_FINISH' || actionForm.solutionResult === 1"
               type="primary"
+              custom-class="flow-submit-button"
               :loading="submitting"
               @click="submitAction(currentNodeCode === 'ONSITE_FINISH' ? 'ARCHIVE' : 'SUBMIT')"
             >
@@ -249,77 +315,112 @@
           </view>
         </view>
 
-        <view v-for="group in actionHistoryGroups" :key="group.key" class="section-card history-card">
+        <view v-if="actionHistoryGroups.length" class="section-card history-card">
           <view class="section-title">
-            {{ group.label }}
+            流程
           </view>
-          <view v-if="group.actionType || group.handlerUserName" class="log-row">
-            <view>{{ group.handlerUserName || '-' }} · {{ group.remark || '-' }}</view>
-            <view>{{ group.createTime || '-' }}</view>
-          </view>
-          <view v-for="item in group.solutionResults" :key="item.key" class="field-block mt-3">
-            <view class="field-title">
-              解决结果
+          <view
+            v-for="(group, index) in actionHistoryGroups"
+            :key="group.key"
+            class="history-node"
+            :class="{ 'is-last': index === actionHistoryGroups.length - 1 }"
+          >
+            <view class="history-node-rail">
+              <view class="history-node-status">
+                <wd-icon name="check" color="#fff" size="14px" />
+              </view>
             </view>
-            <view class="info-row">
-              <text>处理结果</text><text>{{ item.resultText }}</text>
+            <view class="history-node-content">
+              <view class="history-node-header">
+                <text class="history-node-name">{{ group.label }}</text>
+                <text class="history-node-time">{{ group.createTime || '-' }}</text>
+              </view>
+              <view v-if="group.handlerUserName || group.remark" class="history-node-detail">
+                <text>{{ group.handlerUserName || '-' }}</text>
+                <text v-if="group.remark" class="history-node-result">（{{ group.remark }}）</text>
+              </view>
+              <view v-for="item in group.solutionResults" :key="item.key" class="field-block mt-3">
+                <view class="field-title">
+                  解决结果
+                </view>
+                <view class="info-row">
+                  <text>处理结果</text>
+                  <text class="solution-result-badge">{{ item.resultText }}</text>
+                </view>
+                <view v-if="item.solutionRemark" class="readonly-text mt-3">
+                  {{ item.solutionRemark }}
+                </view>
+              </view>
+              <view v-if="group.files.length" class="field-block mt-3">
+                <view class="field-title">
+                  照片/视频
+                </view>
+                <wd-upload
+                  :file-list="group.files"
+                  :limit="9"
+                  accept="media"
+                  disabled
+                  custom-class="maintenance-media-upload"
+                />
+              </view>
             </view>
-            <view v-if="item.solutionRemark" class="readonly-text mt-3">
-              {{ item.solutionRemark }}
-            </view>
-          </view>
-          <view v-if="group.files.length" class="field-block mt-3">
-            <view class="field-title">
-              照片/视频
-            </view>
-            <wd-upload
-              :file-list="group.files"
-              :limit="9"
-              accept="media"
-              disabled
-              custom-class="maintenance-media-upload"
-            />
           </view>
         </view>
       </template>
 
       <template v-else>
-        <view class="section-card">
+        <view class="create-form">
           <view class="field-title">
             选择项目
           </view>
           <picker mode="selector" :range="projectNames" @change="selectProject">
             <view class="picker-value">
-              {{ selectedProject?.projectName || '请选择项目' }}
+              <template v-if="selectedProject?.projectName">
+                {{ selectedProject.projectName }}
+              </template>
+              <view v-else class="picker-placeholder">
+                <view class="picker-add-icon">
+                  <wd-icon name="add" color="#fff" size="12px" />
+                </view>
+                <text>请选择项目</text>
+              </view>
             </view>
           </picker>
-          <view class="field-title mt-3">
-            联系人
+          <view v-if="selectedProject?.contactName" class="info-row mt-3">
+            <text>联系人</text><text>{{ selectedProject.contactName }}</text>
           </view>
-          <view class="info-row">
-            <text>{{ selectedProject?.contactName || '-' }}</text>
+          <view v-if="selectedProject?.contactPhone" class="info-row">
+            <text>联系电话</text>
+            <view class="phone-action" @tap="callPhone(selectedProject.contactPhone)">
+              <wd-icon name="phone" size="14px" color="#5b8def" />
+              <text>{{ selectedProject.contactPhone }}</text>
+            </view>
           </view>
-          <view class="field-title mt-3">
-            联系电话
-          </view>
-          <view class="info-row">
-            <text @tap="callPhone(selectedProject?.contactPhone)">{{ selectedProject?.contactPhone || '-' }}</text>
-          </view>
-          <view class="field-title mt-3">
+          <view v-if="selectedProject" class="field-title mt-3">
             联系人说明
           </view>
-          <view class="readonly-text">
-            {{ selectedProject?.contactRemark || '-' }}
-          </view>
+          <wd-textarea
+            v-if="selectedProject"
+            v-model="createForm.contactRemark"
+            custom-textarea-class="compact-textarea"
+            style="background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.025); border-radius: 8px;"
+            :maxlength="200"
+            clearable
+            placeholder="请输入联系人说明"
+            placeholder-style="color: #bfbfbf;"
+          />
           <view class="field-title mt-3">
             故障描述
           </view>
           <wd-textarea
             v-model="createForm.faultDescription"
+            custom-textarea-class="compact-textarea"
+            style="background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.025); border-radius: 8px;"
             :maxlength="1000"
             show-word-limit
             clearable
             placeholder="请输入故障描述"
+            placeholder-style="color: #bfbfbf;"
           />
           <view class="field-title mt-3">
             上传图片或视频
@@ -341,10 +442,18 @@
           </view>
           <picker mode="selector" :range="nextCandidateNames" @change="selectNextCandidate">
             <view class="picker-value">
-              {{ selectedNextCandidateName || '请选择下一节点处理人' }}
+              <template v-if="selectedNextCandidateName">
+                {{ selectedNextCandidateName }}
+              </template>
+              <view v-else class="picker-placeholder">
+                <view class="picker-add-icon">
+                  <wd-icon name="add" color="#fff" size="12px" />
+                </view>
+                <text>请选择下一节点处理人</text>
+              </view>
             </view>
           </picker>
-          <wd-button block type="primary" :loading="submitting" custom-style="min-height: 46px; margin-top: 20px; border-radius: 10px; background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%); font-size: 16px; font-weight: 600;" @click="createWorkOrder">
+          <wd-button block type="primary" custom-class="flow-submit-button" :loading="submitting" @click="createWorkOrder">
             提交维保单
           </wd-button>
         </view>
@@ -391,9 +500,10 @@ const scanning = ref(false)
 const flowStatusVisible = ref(false)
 const stampLoaded = ref(false)
 const initialized = ref(false)
+const miniappCode = ref('')
 const location = reactive({ longitude: null, latitude: null })
 const runtime = reactive({ instance: null, nodes: [], actionLogs: [], form: {} })
-const createForm = reactive({ faultDescription: '' })
+const createForm = reactive({ faultDescription: '', contactRemark: '' })
 const actionForm = reactive({ solutionResult: null, solutionRemark: '' })
 const currentUserId = ref(null)
 
@@ -466,6 +576,7 @@ const actionHistoryGroups = computed(() => {
 })
 const currentNode = computed(() => (runtime.nodes || []).find(item => item.current))
 const currentNodeCode = computed(() => currentNode.value?.nodeType || currentNode.value?.nodeCode || '')
+const showMiniappCode = computed(() => currentNodeCode.value !== 'CREATE' && !!miniappCode.value)
 const canEdit = computed(() => runtime.instance?.status === 'RUNNING' && Number(runtime.instance?.currentHandlerUserId) === Number(currentUserId.value))
 const needsTargetUser = computed(() => currentNodeCode.value === 'CREATE' || currentNodeCode.value === 'OWNER_ASSIGN')
 const projectNames = computed(() => projects.value.map(item => item.projectName || item.name || '-'))
@@ -529,6 +640,15 @@ async function initDetail() {
   stampLoaded.value = false
   const result = await othersApi.workflowInstanceRuntime(instanceId.value)
   Object.assign(runtime, result || {})
+  miniappCode.value = ''
+  if (currentNodeCode.value && currentNodeCode.value !== 'CREATE') {
+    try {
+      miniappCode.value = await othersApi.workflowInstanceMiniappCode(instanceId.value)
+    }
+    catch (error) {
+      console.warn('获取流程小程序码失败', error)
+    }
+  }
   await nextTick()
   if (archivedSolutionStamp.value)
     setTimeout(() => { stampLoaded.value = true }, 200)
@@ -578,6 +698,7 @@ async function init() {
 
 function selectProject(event) {
   selectedProject.value = projects.value[Number(event.detail.value)] || null
+  createForm.contactRemark = selectedProject.value?.contactRemark || ''
 }
 
 function openFlowStatus() {
@@ -666,7 +787,7 @@ async function createWorkOrder() {
         projectId: selectedProject.value.id,
         contactName: selectedProject.value.contactName,
         contactPhone: selectedProject.value.contactPhone,
-        contactRemark: selectedProject.value.contactRemark,
+        contactRemark: createForm.contactRemark,
         faultDescription: createForm.faultDescription,
         fileCodes: uploadedCodes(),
       },
@@ -892,8 +1013,8 @@ async function scanOnsiteCode() {
     const scanResult = await new Promise((resolve, reject) => {
       uni.scanCode({ success: resolve, fail: reject })
     })
-    const position = await getLocation()
     onsiteCode.value = scanResult.result || ''
+    const position = await getLocation()
     location.longitude = position.longitude
     location.latitude = position.latitude
   }
@@ -972,5 +1093,23 @@ page {
 .maintenance-media-upload .wd-upload__video,
 .maintenance-media-upload .wd-upload__file {
   border-radius: inherit;
+}
+
+.compact-textarea {
+  height: 72px;
+}
+
+.create-form .maintenance-media-upload .wd-upload__preview,
+.create-form .maintenance-media-upload .wd-upload__evoke,
+.action-card .maintenance-media-upload .wd-upload__preview,
+.action-card .maintenance-media-upload .wd-upload__evoke {
+  border-radius: 8px;
+}
+
+.history-card .maintenance-media-upload .wd-upload__preview,
+.history-card .maintenance-media-upload .wd-upload__picture,
+.history-card .maintenance-media-upload .wd-upload__video,
+.history-card .maintenance-media-upload .wd-upload__file {
+  background: #f6f6f7;
 }
 </style>
