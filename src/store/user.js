@@ -2,13 +2,13 @@
  * 登录用户
  *
  */
-import _ from 'lodash'
 import {
   defineStore,
 } from 'pinia'
 import {
   simpleLoginApi,
 } from '@/api/login/simple-login-api.js'
+import './pinia'
 
 const defaultUserInfo = {
   // openId

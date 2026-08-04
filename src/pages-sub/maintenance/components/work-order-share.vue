@@ -1,6 +1,6 @@
 <template>
   <view class="work-order-share">
-    <wd-button type="primary" custom-class="share-work-order-button" :loading="generating" @click="previewShareImage">
+    <wd-button type="primary" custom-class="share-work-order-button" custom-style="background: #05f;" :loading="generating" @click="previewShareImage">
       分享工单
     </wd-button>
     <canvas :id="canvasId" type="2d" class="share-canvas" />
@@ -13,8 +13,10 @@ import { getCurrentInstance, nextTick, ref } from 'vue'
 const props = defineProps({
   form: { type: Object, default: () => ({}) },
   historyGroups: { type: Array, default: () => [] },
+  finishInfo: { type: Object, default: null },
+  finishPhotos: { type: Array, default: () => [] },
+  workOrderId: { type: [String, Number], default: '' },
   createdAt: { type: String, default: '' },
-  miniappCode: { type: String, default: '' },
 })
 
 const instance = getCurrentInstance()
@@ -35,6 +37,13 @@ function loadImage(canvasInstance, source) {
     image.onerror = () => resolve(null)
     image.src = source
   })
+}
+
+function drawImageAspectFit(ctx, image, x, y, width, height) {
+  const scale = Math.min(width / image.width, height / image.height)
+  const imageWidth = image.width * scale
+  const imageHeight = image.height * scale
+  ctx.drawImage(image, x + (width - imageWidth) / 2, y + (height - imageHeight) / 2, imageWidth, imageHeight)
 }
 
 function getCanvas() {
@@ -100,13 +109,18 @@ function formatTime(value) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
-function render(ctx, draw, miniappCodeImage) {
+function render(ctx, draw, onsitePhotoImagesByGroup, finishPhotoImages) {
   let y = padding
   const lineHeight = 36
+  const textAreaLineHeight = 42
+  const textAreaPaddingX = 40
+  const textAreaPaddingTop = 48
+  const textAreaPaddingBottom = 28
+  const textAreaContentWidth = contentWidth - 48 - textAreaPaddingX * 2
   const cardGap = 24
-  const groups = props.historyGroups
+  const shareGroups = props.historyGroups
     .map(group => ({ ...group, solutionResults: (group.solutionResults || []).filter(isShareableResult) }))
-    .filter(group => group.solutionResults.length)
+    .filter(group => group.nodeCode === 'ONSITE_ARRIVE' || group.solutionResults.length)
 
   function text(lines, x, top, color, shouldDraw) {
     if (shouldDraw) {
@@ -114,6 +128,18 @@ function render(ctx, draw, miniappCodeImage) {
       lines.forEach((line, index) => ctx.fillText(line, x, top + index * lineHeight))
     }
     return lines.length * lineHeight
+  }
+
+  function textArea(lines, shouldDraw) {
+    const areaHeight = textAreaPaddingTop + (lines.length - 1) * textAreaLineHeight + textAreaPaddingBottom
+    if (shouldDraw) {
+      roundedRect(ctx, padding + 24, y, contentWidth - 48, areaHeight, 12)
+      ctx.fillStyle = '#F7F8FC'
+      ctx.fill()
+      ctx.fillStyle = '#4D586B'
+      lines.forEach((line, index) => ctx.fillText(line, padding + 24 + textAreaPaddingX, y + textAreaPaddingTop + index * textAreaLineHeight))
+    }
+    y += areaHeight
   }
 
   function card(title, body, accent) {
@@ -149,6 +175,20 @@ function render(ctx, draw, miniappCodeImage) {
     y += cardGap
   }
 
+  function maintenancePhotos(images, shouldDraw) {
+    if (!images.length)
+      return
+    const photoSize = (contentWidth - 72) / 2
+    y += 20
+    images.forEach((image, index) => {
+      const x = padding + 24 + (index % 2) * (photoSize + 24)
+      if (shouldDraw)
+        drawImageAspectFit(ctx, image, x, y, photoSize, photoSize)
+      if (index % 2 === 1 || index === images.length - 1)
+        y += photoSize + 18
+    })
+  }
+
   if (draw) {
     const background = ctx.createLinearGradient(0, 0, width, 900)
     background.addColorStop(0, '#EEF2FF')
@@ -168,8 +208,8 @@ function render(ctx, draw, miniappCodeImage) {
     ctx.arc(width - 116, y + 36, 66, 0, Math.PI * 2)
     ctx.fill()
     ctx.fillStyle = '#FFFFFF'
-    ctx.font = 'bold 38px sans-serif'
-    ctx.fillText('维保工单', padding + 28, y + 54)
+    ctx.font = 'bold 34px sans-serif'
+    ctx.fillText(`${props.form.projectName || '-'} - 维保单`, padding + 28, y + 54)
     ctx.fillStyle = 'rgba(255, 255, 255, 0.78)'
     ctx.font = '20px sans-serif'
     ctx.fillText(`创建时间：${formatTime(props.createdAt)}`, padding + 28, y + 96)
@@ -179,10 +219,10 @@ function render(ctx, draw, miniappCodeImage) {
 
   card('工单信息', (shouldDraw) => {
     const fields = [
+      ['维保单编号', props.workOrderId],
       ['项目', props.form.projectName],
       ['联系人', props.form.contactName],
       ['联系电话', props.form.contactPhone],
-      ['联系人说明', props.form.contactRemark],
     ]
     fields.forEach(([label, value]) => {
       ctx.font = '22px sans-serif'
@@ -209,18 +249,33 @@ function render(ctx, draw, miniappCodeImage) {
     }
     y += 44
     ctx.font = '26px sans-serif'
-    const lines = wrapText(ctx, props.form.faultDescription, contentWidth - 80)
-    if (shouldDraw) {
-      roundedRect(ctx, padding + 24, y, contentWidth - 48, lines.length * lineHeight + 24, 12)
-      ctx.fillStyle = '#F7F8FC'
-      ctx.fill()
-    }
-    text(lines, padding + 40, y + 28, '#4D586B', shouldDraw)
-    y += lines.length * lineHeight + 6
+    const lines = wrapText(ctx, props.form.faultDescription, textAreaContentWidth)
+    textArea(lines, shouldDraw)
   }, '#5468F2')
 
-  groups.forEach((group) => {
-    card(group.label || '流程节点', (shouldDraw) => {
+  let onsiteIndex = 0
+  shareGroups.forEach((group) => {
+    if (group.nodeCode === 'ONSITE_ARRIVE') {
+      const onsitePhotoImages = onsitePhotoImagesByGroup[onsiteIndex++] || []
+      const title = Number(group.roundNo) > 1 ? `维保上门（第${group.roundNo}轮）` : '维保上门'
+      card(title, (shouldDraw) => {
+        if (shouldDraw) {
+          ctx.fillStyle = '#4D586B'
+          ctx.font = '24px sans-serif'
+          ctx.fillText(`维保人：${group.handlerUserName || '-'}`, padding + 24, y + 24)
+          ctx.fillText(`维保时间：${formatTime(group.createTime)}`, padding + 24, y + 58)
+          if (onsitePhotoImages.length) {
+            ctx.fillStyle = '#35415A'
+            ctx.font = 'bold 26px sans-serif'
+            ctx.fillText('维保前照片', padding + 24, y + 108)
+          }
+        }
+        y += onsitePhotoImages.length ? 128 : 78
+        maintenancePhotos(onsitePhotoImages, shouldDraw)
+      }, '#36BD69')
+      return
+    }
+    card((group.label || '流程节点').replace(/（第\d+轮）$/, ''), (shouldDraw) => {
       group.solutionResults.forEach((item, index) => {
         if (index)
           y += 18
@@ -242,6 +297,15 @@ function render(ctx, draw, miniappCodeImage) {
           y += Math.max(lineHeight, lines.length * lineHeight) + 14
         }
         if (String(item.solutionRemark || '').trim()) {
+          if (group.key === props.finishInfo?.key) {
+            if (shouldDraw) {
+              ctx.fillStyle = '#4D586B'
+              ctx.font = '24px sans-serif'
+              ctx.fillText(`维保人：${props.finishInfo.handlerUserName || '-'}`, padding + 24, y + 24)
+              ctx.fillText(`维保时间：${formatTime(props.finishInfo.createTime)}`, padding + 24, y + 58)
+            }
+            y += 78
+          }
           if (shouldDraw) {
             ctx.fillStyle = '#35415A'
             ctx.font = 'bold 26px sans-serif'
@@ -249,31 +313,15 @@ function render(ctx, draw, miniappCodeImage) {
           }
           y += 44
           ctx.font = '26px sans-serif'
-          const lines = wrapText(ctx, item.solutionRemark, contentWidth - 80)
-          if (shouldDraw) {
-            roundedRect(ctx, padding + 24, y, contentWidth - 48, lines.length * lineHeight + 24, 12)
-            ctx.fillStyle = '#F7F8FC'
-            ctx.fill()
+          const lines = wrapText(ctx, item.solutionRemark, textAreaContentWidth)
+          textArea(lines, shouldDraw)
+          if (group.key === props.finishInfo?.key && finishPhotoImages.length) {
+            maintenancePhotos(finishPhotoImages, shouldDraw)
           }
-          text(lines, padding + 40, y + 28, '#4D586B', shouldDraw)
-          y += lines.length * lineHeight + 6
         }
       })
     }, '#8B5CF6')
   })
-
-  if (miniappCodeImage) {
-    const codeSize = 180
-    y += 20
-    if (draw) {
-      ctx.fillStyle = '#35415A'
-      ctx.font = '24px sans-serif'
-      const label = '维保工单码'
-      ctx.fillText(label, (width - ctx.measureText(label).width) / 2, y + 24)
-      ctx.drawImage(miniappCodeImage, (width - codeSize) / 2, y + 46, codeSize, codeSize)
-    }
-    y += codeSize + 70
-  }
 
   return y - cardGap + padding
 }
@@ -301,13 +349,19 @@ async function previewShareImage() {
     shareTime.value = formatTime(new Date())
     const canvasInstance = await getCanvas()
     const ctx = canvasInstance.getContext('2d')
-    const miniappCodeImage = await loadImage(canvasInstance, props.miniappCode)
+    const onsiteGroups = props.historyGroups.filter(group => group.nodeCode === 'ONSITE_ARRIVE')
+    const onsitePhotoImagesByGroup = await Promise.all(onsiteGroups.map(async group => (
+      await Promise.all((group.files || []).map(file => loadImage(canvasInstance, file.url))).then(images => images.filter(Boolean))
+    )))
+    const finishPhotoImages = (
+      await Promise.all(props.finishPhotos.map(source => loadImage(canvasInstance, source)))
+    ).filter(Boolean)
     const pixelRatio = Math.min(3, Math.max(1, uni.getSystemInfoSync().pixelRatio || 1))
-    const height = Math.ceil(render(ctx, false, miniappCodeImage))
+    const height = Math.ceil(render(ctx, false, onsitePhotoImagesByGroup, finishPhotoImages))
     canvasInstance.width = width * pixelRatio
     canvasInstance.height = height * pixelRatio
     ctx.scale(pixelRatio, pixelRatio)
-    render(ctx, true, miniappCodeImage)
+    render(ctx, true, onsitePhotoImagesByGroup, finishPhotoImages)
     const path = await exportImage(canvasInstance, pixelRatio, height)
     uni.previewImage({ urls: [path], current: path })
   }

@@ -8,7 +8,7 @@
           @click="showAuth = true"
         >
           <div class="avatar-wrapper" style="position: relative;">
-            <image src="/static/images/icon-preview.png" mode="aspectFill" style="opacity: 0.2;position: absolute;left:0;top:0;width: 100%; height: 100%; z-index: 1;" />
+            <!-- <image src="/static/images/icon-preview.png" mode="aspectFill" style="opacity: 0.2;position: absolute;left:0;top:0;width: 100%; height: 100%; z-index: 1;" /> -->
             <div class="avatar" style="background-color: #fff;z-index: 2;">
               <image :src="avatar" />
             </div>
@@ -53,6 +53,9 @@
             <wd-tag v-else-if="type === 2" custom-class="tag-custom-class" type="success" size="large" plain>
               已认证
             </wd-tag>
+            <wd-tag v-else-if="type === 3" custom-class="tag-custom-class" type="danger" size="large" plain>
+              认证未通过
+            </wd-tag>
             <wd-tag v-else custom-class="tag-custom-class" type="primary" size="large" plain>
               未认证
             </wd-tag>
@@ -65,29 +68,29 @@
                 label-width="100px"
                 size="large"
                 prop="name"
-                :disabled="type !== 0"
+                :disabled="!canSubmitCertification"
                 custom-input-class="username-custom-input-class"
                 clearable
                 placeholder="请输入姓名"
                 :rules="[{ required: true, message: '请填写姓名' }]"
               />
 
-              <wd-input
-                v-model="model.companyName"
-                label="公司"
-                label-width="100px"
-                size="large"
-                prop="companyName"
-                custom-input-class="username-custom-input-class"
-                :disabled="type !== 0"
-                :rules="[{ required: true, message: '请填写公司' }]"
-              />
-
-              <wd-cell v-if="model.companyName === '丝路视觉'" style="--wot-cell-padding: 12px" width="100px" title="部门" size="large" required prop="department">
-                <picker :value="model.department" :disabled="type !== 0" :range="departmentList" range-key="name" @change="bindPickerChange($event)">
+              <wd-cell style="--wot-cell-padding: 12px" width="100px" title="公司" size="large" required prop="companyName">
+                <picker :value="selectedCompanyIndex" :disabled="!canSubmitCertification" :range="companyList" range-key="name" @change="bindCompanyChange($event)">
                   <view class="picker text-align-left">
-                    <view class="!text-right" :class="[type !== 0 ? '!text-[#C5C5C5]' : '', departmentList[model.department] ? '' : '']">
-                      {{ departmentList[model.department] ? departmentList[model.department].name : '请选择部门' }}
+                    <view class="!text-right" :class="!canSubmitCertification ? '!text-[#C5C5C5]' : ''">
+                      {{ model.companyName || '请选择公司' }}
+                      <wd-icon name="arrow-right" size="18" color="rgba(0, 0, 0, 0.25)" />
+                    </view>
+                  </view>
+                </picker>
+              </wd-cell>
+
+              <wd-cell v-if="model.companyName" style="--wot-cell-padding: 12px" width="100px" title="部门" size="large" required prop="department">
+                <picker :value="selectedDepartmentIndex" :disabled="!canSubmitCertification" :range="selectedDepartmentList" range-key="name" @change="bindPickerChange($event)">
+                  <view class="picker text-align-left">
+                    <view class="!text-right" :class="!canSubmitCertification ? '!text-[#C5C5C5]' : ''">
+                      {{ selectedDepartmentName || '请选择部门' }}
                       <wd-icon name="arrow-right" size="18" color="rgba(0, 0, 0, 0.25)" />
                     </view>
                   </view>
@@ -121,7 +124,7 @@
                   </view>
                 </wd-cell>
               </template>
-              <wd-cell v-if="type === 0" title-width="0px">
+              <wd-cell v-if="canSubmitCertification" title-width="0px">
                 <div class="flex items-center p-[20px] pl-0 pr-0">
                   <div
                     class="align-center w-full flex justify-center pl-[10px]"
@@ -191,7 +194,7 @@ export default {
       contactEdit: false,
       model: {
         name: '',
-        companyName: '丝路视觉',
+        companyName: '',
         department: '',
         openId,
         code: [
@@ -202,8 +205,30 @@ export default {
           },
         ],
       },
-      departmentList: [{ name: '总经办' }, { name: '人力资源部' }, { name: '行政部' }, { name: '信息部' }, { name: '财务部' }, { name: '采购部' }, { name: '市场中心' }, { name: '工程中心' }, { name: '造价部' }, { name: '数字中心' }, { name: '新媒体' }],
+      companyList: [],
+      departmentList: [],
     }
+  },
+  computed: {
+    canSubmitCertification() {
+      return this.type === 0 || this.type === 3
+    },
+    selectedCompanyIndex() {
+      return this.companyList.findIndex(item => item.name === this.model.companyName)
+    },
+    selectedDepartmentList() {
+      const company = this.companyList[this.selectedCompanyIndex]
+      if (!company) {
+        return []
+      }
+      return this.departmentList.filter(item => String(item.companyId) === String(company.id))
+    },
+    selectedDepartmentIndex() {
+      return this.selectedDepartmentList.findIndex(item => String(item.id) === String(this.model.department))
+    },
+    selectedDepartmentName() {
+      return this.selectedDepartmentList[this.selectedDepartmentIndex]?.name || ''
+    },
   },
   async onShow() {
     await uni.$onLaunched
@@ -216,7 +241,14 @@ export default {
   methods: {
     bindPickerChange(e) {
       console.log('bindPickerChange', e)
-      this.model.department = e.detail.value
+      this.model.department = this.selectedDepartmentList[e.detail.value]?.id || ''
+    },
+    bindCompanyChange(e) {
+      this.model.companyName = this.companyList[e.detail.value]?.name || ''
+      this.model.department = ''
+      if (this.model.companyName === '其他') {
+        this.model.department = this.selectedDepartmentList[0]?.id || ''
+      }
     },
     onInput(index, value) {
       console.log('onInput', index, value)
@@ -257,8 +289,16 @@ export default {
         if (valid.valid) {
           console.log('submit', valid)
           console.log('submit', this.model)
-          const department = this.departmentList[this.model.department]?.name || ''
-          if (this.model.companyName === '丝路视觉' && !department) {
+          const department = this.selectedDepartmentName
+          if (!this.model.companyName) {
+            uni.showToast({
+              title: '请选择公司',
+              duration: 1000,
+              icon: 'none',
+            })
+            return
+          }
+          if (!department) {
             uni.showToast({
               title: '请选择部门',
               duration: 1000,
@@ -368,9 +408,12 @@ export default {
         openId,
       } = useUserStore()
       console.log(openId)
-      const userInfo = await simpleLoginApi.getEmployeeInfo({
-        openId,
-      })
+      const [companyDepartmentOptions, userInfo] = await Promise.all([
+        simpleLoginApi.getCompanyDepartmentOptions(),
+        simpleLoginApi.getEmployeeInfo({ openId }),
+      ])
+      this.companyList = companyDepartmentOptions?.companies || []
+      this.departmentList = companyDepartmentOptions?.departments || []
       this.wdLoading = false
       this.nameEdit = false
       this.contactEdit = false
@@ -389,9 +432,10 @@ export default {
       if (name) {
         this.model.name = name
       }
-      this.model.companyName = companyName || '丝路视觉'
+      this.model.companyName = companyName || ''
       if (department) {
-        this.model.department = this.departmentList.findIndex(i => i.name === department)
+        const company = this.companyList.find(item => item.name === this.model.companyName)
+        this.model.department = this.departmentList.find(item => String(item.companyId) === String(company?.id) && item.name === department)?.id || ''
       }
       if (type) {
         this.type = type

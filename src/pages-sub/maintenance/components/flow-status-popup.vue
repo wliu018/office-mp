@@ -36,30 +36,35 @@ const graphItems = computed(() => {
   const actionNameMap = { START: '启动', ASSIGN: '指派', SUBMIT: '提交', TRANSFER: '转派', PASS: '通过', RETURN: '退回', ARCHIVE: '归档' }
   const archived = props.runtime?.instance?.status === 'ARCHIVED'
   const currentNodeId = String(props.runtime?.instance?.currentNodeId || '')
+  const currentNode = !archived && nodes.find(node => node.current || String(node.nodeId || node.id) === currentNodeId)
+  const currentNodeKey = String(currentNode?.nodeId || currentNode?.id || '')
   const visitedNodeIds = new Set()
-  const actionItems = (props.runtime?.actionLogs || []).map((log, index) => {
+  const actionItems = (props.runtime?.actionLogs || []).flatMap((log, index) => {
     const node = nodesById.get(String(log.nodeId)) || nodesByCode.get(log.nodeCode || log.nodeType)
+    const nodeKey = String(node?.nodeId || node?.id || log.nodeId || '')
+    // 当前节点的分派记录只是待办归属，不应再作为“已执行”节点绘制。
+    if (currentNodeKey && nodeKey === currentNodeKey)
+      return []
     if (node)
-      visitedNodeIds.add(String(node.nodeId || node.id))
-    return {
+      visitedNodeIds.add(nodeKey)
+    return [{
       id: `action-${log.id || index}`,
-      label: node?.nodeName || log.nodeName || log.nodeCode || '流程节点',
+      title: node?.nodeName || log.nodeName || log.nodeCode || '流程节点',
       action: actionNameMap[log.actionType] || log.actionType || '已执行',
       handler: log.handlerUserName || '已处理',
       time: log.createTime || '暂无处理时间',
       rounds: log.roundNo || 1,
       status: 'done',
-    }
+    }]
   })
-  const currentNode = !archived && nodes.find(node => node.current || String(node.nodeId || node.id) === currentNodeId)
   if (currentNode) {
     actionItems.push({
       id: `current-${currentNode.nodeId || currentNode.id}`,
-      label: currentNode.nodeName || currentNode.nodeCode || '流程节点',
+      title: currentNode.nodeName || currentNode.nodeCode || '流程节点',
       action: '当前动作',
-      handler: '处理中',
+      handler: props.runtime?.instance?.currentHandlerName || '待分派',
       time: '等待处理',
-      rounds: 1,
+      rounds: props.runtime?.instance?.currentRoundNo || 1,
       status: 'current',
     })
   }
@@ -67,7 +72,7 @@ const graphItems = computed(() => {
     .filter(node => !visitedNodeIds.has(String(node.nodeId || node.id)) && node !== currentNode)
     .map((node, index) => ({
       id: `pending-${node.nodeId || node.id || index}`,
-      label: node.nodeName || node.nodeCode || '流程节点',
+      title: node.nodeName || node.nodeCode || '流程节点',
       action: '待流转',
       handler: '待处理',
       time: '尚未流转',
@@ -92,7 +97,7 @@ function registerWorkflowCard() {
       const fill = cfg.status === 'done' ? '#fff' : cfg.status === 'current' ? '#f7faff' : '#fbfcfe'
       const card = group.addShape('rect', { attrs: { x: -width / 2, y: -height / 2, width, height, radius: 10, fill, stroke: color, lineWidth: cfg.status === 'current' ? 2 : 1, lineDash: cfg.status === 'pending' ? [5, 4] : undefined, shadowColor: 'rgba(31, 41, 55, 0.10)', shadowBlur: 10, shadowOffsetY: 4 }, name: 'card' })
       group.addShape('rect', { attrs: { x: -width / 2, y: -height / 2, width: 4, height, radius: [10, 0, 0, 10], fill: color }, name: 'status-bar' })
-      group.addShape('text', { attrs: { x: -width / 2 + 16, y: -height / 2 + 20, text: cfg.label, fill: '#1f2937', fontSize: 15, fontWeight: 600, textBaseline: 'middle' }, name: 'title' })
+      group.addShape('text', { attrs: { x: -width / 2 + 16, y: -height / 2 + 20, text: cfg.title, fill: '#1f2937', fontSize: 15, fontWeight: 600, textBaseline: 'middle' }, name: 'title' })
       group.addShape('text', { attrs: { x: -width / 2 + 16, y: -height / 2 + 44, text: cfg.action, fill: color, fontSize: 12, fontWeight: 600, textBaseline: 'middle' }, name: 'action' })
       group.addShape('text', { attrs: { x: width / 2 - 16, y: -height / 2 + 44, text: cfg.handler, fill: '#7b8798', fontSize: 11, textAlign: 'right', textBaseline: 'middle' }, name: 'handler' })
       group.addShape('text', { attrs: { x: -width / 2 + 16, y: -height / 2 + 65, text: `第${cfg.rounds || 1}轮 · ${cfg.time}`, fill: '#98a2b3', fontSize: 11, textBaseline: 'middle' }, name: 'time' })

@@ -38,6 +38,10 @@ export const simpleLoginApi = {
     return getRequest(`/simpleLogin/getEmployeeInfo/${params.openId}`)
   },
 
+  getCompanyDepartmentOptions: () => {
+    return getRequest(`/admin/booking/company-employees/options`)
+  },
+
   isMarketPersonnel: (params) => {
     return getRequest(`/simpleLogin/is-market-personnel/${params.openId}`)
   },

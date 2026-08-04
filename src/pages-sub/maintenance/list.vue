@@ -8,6 +8,7 @@
   </div>
   <div :style="`height: ${navBarConfig.customNavBarHeight}px;`" />
   <scroll-view
+    class="workflow-list-scroll-view"
     scroll-y
     :enable-back-to-top="true"
     :style="`height: calc(100vh - ${navBarConfig.customNavBarHeight}px);`"
@@ -63,6 +64,15 @@
           <text class="card-detail-label">创建时间</text>
           <text class="card-detail-value">{{ item.createTime || '-' }}</text>
         </view>
+        <view v-if="item.workflowProgress != null" class="workflow-progress" aria-label="流程进度">
+          <view class="workflow-progress-track">
+            <view class="workflow-progress-completed" :style="{ width: `${item.workflowProgress}%` }" />
+            <view class="workflow-progress-pending" :style="{ left: `${item.workflowProgress}%` }" />
+            <view v-if="item.showCurrentProgress" class="workflow-progress-current-anchor" :style="{ left: `${item.workflowProgress}%` }">
+              <view class="workflow-progress-current" />
+            </view>
+          </view>
+        </view>
       </view>
     </view>
   </scroll-view>
@@ -103,7 +113,7 @@ async function loadWorkflows() {
       othersApi.workflowInstanceStatisticsByOpenId(openId),
       simpleLoginApi.isMarketPersonnel({ openId }),
     ])
-    workflows.value = pending || []
+    workflows.value = await withWorkflowProgress(pending || [])
     statistics.value = result || { pending: 0, processed: 0, all: 0 }
     canCreateWorkOrder.value = isMarketPersonnel
   }
@@ -116,6 +126,29 @@ async function loadWorkflows() {
   finally {
     loading.value = false
   }
+}
+
+async function withWorkflowProgress(items) {
+  return Promise.all(items.map(async (item) => {
+    try {
+      const runtime = await othersApi.workflowInstanceRuntime(item.id)
+      const nodes = [...(runtime?.nodes || [])].sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
+      const currentNodeId = runtime?.instance?.currentNodeId || item.currentNodeId
+      const currentNodeIndex = nodes.findIndex(node => node.current || String(node.nodeId || node.id) === String(currentNodeId))
+      if (currentNodeIndex < 0 || !nodes.length)
+        return item
+      const currentNode = nodes[currentNodeIndex]
+      const isArchived = currentNode?.nodeCode === 'ARCHIVE' || currentNode?.nodeType === 'ARCHIVE' || runtime?.instance?.status === 'ARCHIVED'
+      return {
+        ...item,
+        workflowProgress: isArchived ? null : Math.round((currentNodeIndex + 1) / nodes.length * 100),
+        showCurrentProgress: !isArchived,
+      }
+    }
+    catch {
+      return item
+    }
+  }))
 }
 
 function createWorkOrder() {

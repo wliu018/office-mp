@@ -19,6 +19,9 @@ export const othersApi = {
   projectList: (params) => {
     return getRequest(`/project/list`, params)
   },
+  projectListGroupByYear: () => {
+    return getRequest(`/project/list-group-by-year`)
+  },
   workflowInstanceListByOpenId: (openId) => {
     return getRequest(`/workflow/instance/list-by-open-id`, { openId })
   },
@@ -34,6 +37,9 @@ export const othersApi = {
   workflowInstanceRuntime: (instanceId) => {
     return getRequest(`/workflow/instance/${instanceId}/runtime`)
   },
+  workflowInstanceVerifyOnsiteCode: (instanceId, code) => {
+    return getRequest(`/workflow/instance/${instanceId}/verify-onsite-code`, { code })
+  },
   workflowInstanceMiniappCode: (instanceId) => {
     return getRequest(`/workflow/instance/${instanceId}/miniapp-code`)
   },
@@ -48,6 +54,9 @@ export const othersApi = {
   },
   workflowNodeList: () => {
     return getRequest(`/workflow/node/list`)
+  },
+  userInfoById: (userId) => {
+    return getRequest(`/userinfo/selById/${userId}`)
   },
   parkingInit: (params) => {
     return getRequest(`/officeParkingCoupon/init`, params)

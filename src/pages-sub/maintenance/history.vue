@@ -8,6 +8,7 @@
   </div>
   <div :style="`height: ${navBarConfig.customNavBarHeight}px;`" />
   <scroll-view
+    class="workflow-list-scroll-view"
     scroll-y
     :enable-back-to-top="true"
     :style="`height: calc(100vh - ${navBarConfig.customNavBarHeight}px);`"
@@ -35,11 +36,26 @@
         </view>
         <view class="card-detail">
           <text class="card-detail-label">当前处理人</text>
-          <text class="card-detail-value">{{ item.currentHandlerName || '-' }}</text>
+          <view class="card-detail-value current-handler">
+            <text>{{ item.currentHandlerName || '-' }}</text>
+            <view v-if="item.currentHandlerPhone" class="current-handler-phone" @tap.stop="callPhone(item.currentHandlerPhone)">
+              <wd-icon name="phone" size="14px" color="#24ADF3" />
+              <text>{{ item.currentHandlerPhone }}</text>
+            </view>
+          </view>
         </view>
         <view class="card-detail">
           <text class="card-detail-label">创建时间</text>
           <text class="card-detail-value">{{ item.createTime || '-' }}</text>
+        </view>
+        <view v-if="item.workflowProgress != null" class="workflow-progress" aria-label="流程进度">
+          <view class="workflow-progress-track">
+            <view class="workflow-progress-completed" :style="{ width: `${item.workflowProgress}%` }" />
+            <view class="workflow-progress-pending" :style="{ left: `${item.workflowProgress}%` }" />
+            <view v-if="item.showCurrentProgress" class="workflow-progress-current-anchor" :style="{ left: `${item.workflowProgress}%` }">
+              <view class="workflow-progress-current" />
+            </view>
+          </view>
         </view>
       </view>
     </view>
@@ -81,17 +97,17 @@ async function loadWorkflows() {
   loading.value = true
   try {
     if (filter.value === 'pending') {
-      workflows.value = await withLastSolutionResult(await othersApi.workflowInstanceListByOpenId(openId) || [])
+      workflows.value = await withWorkflowCardInfo(await othersApi.workflowInstanceListByOpenId(openId) || [])
     }
     else if (filter.value === 'processed') {
-      workflows.value = await withLastSolutionResult(await othersApi.workflowInstanceProcessedListByOpenId(openId) || [])
+      workflows.value = await withWorkflowCardInfo(await othersApi.workflowInstanceProcessedListByOpenId(openId) || [])
     }
     else {
       const [pending, processed] = await Promise.all([
         othersApi.workflowInstanceListByOpenId(openId),
         othersApi.workflowInstanceProcessedListByOpenId(openId),
       ])
-      workflows.value = await withLastSolutionResult([...(pending || []), ...(processed || [])])
+      workflows.value = await withWorkflowCardInfo([...(pending || []), ...(processed || [])])
     }
   }
   catch (error) {
@@ -103,12 +119,31 @@ async function loadWorkflows() {
   }
 }
 
-async function withLastSolutionResult(items) {
+async function withWorkflowCardInfo(items) {
   return Promise.all(items.map(async (item) => {
     try {
-      const solutionResults = (await othersApi.workflowInstanceRuntime(item.id))?.form?.solutionResults || []
+      const runtime = await othersApi.workflowInstanceRuntime(item.id)
+      const solutionResults = runtime?.form?.solutionResults || []
       const solutionResult = solutionResults[solutionResults.length - 1]?.solutionResult
-      return { ...item, lastSolutionResult: formatSolutionResult(solutionResult) }
+      const nodes = [...(runtime?.nodes || [])].sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
+      const currentNodeId = runtime?.instance?.currentNodeId || item.currentNodeId
+      const currentNodeIndex = nodes.findIndex(node => node.current || String(node.nodeId || node.id) === String(currentNodeId))
+      const currentNode = nodes[currentNodeIndex]
+      const isArchived = currentNode?.nodeCode === 'ARCHIVE' || currentNode?.nodeType === 'ARCHIVE' || runtime?.instance?.status === 'ARCHIVED'
+      let currentHandlerPhone = ''
+      if (item.currentHandlerUserId) {
+        try {
+          currentHandlerPhone = (await othersApi.userInfoById(item.currentHandlerUserId))?.phoneNumber || ''
+        }
+        catch {}
+      }
+      return {
+        ...item,
+        lastSolutionResult: formatSolutionResult(solutionResult),
+        currentHandlerPhone,
+        workflowProgress: currentNodeIndex < 0 || !nodes.length || isArchived ? null : Math.round((currentNodeIndex + 1) / nodes.length * 100),
+        showCurrentProgress: !isArchived,
+      }
     }
     catch {
       return item
@@ -125,7 +160,15 @@ function formatSolutionResult(value) {
 }
 
 function openWorkOrder(instanceId) {
-  uni.navigateTo({ url: `/pages-sub/maintenance/maintenance?instanceId=${instanceId}` })
+  wx.navigateTo({
+    url: `/pages-sub/maintenance/maintenance?instanceId=${instanceId}`,
+    routeType: 'wx://cupertino-modal-inside',
+  })
+}
+
+function callPhone(phoneNumber) {
+  if (phoneNumber)
+    uni.makePhoneCall({ phoneNumber: String(phoneNumber) })
 }
 
 onLoad((options) => {
@@ -142,6 +185,7 @@ onShow(async () => {
 @import './scss/list.scss';
 
 .solution-result-badge {
+  align-self: flex-start;
   display: inline-block;
   padding: 4px 8px;
   border-radius: 2px;
@@ -151,5 +195,19 @@ onShow(async () => {
   font-size: 13px;
   line-height: 1.2;
   width: fit-content;
+}
+
+.current-handler {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.current-handler-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #24ADF3;
+  font-size: 13px;
 }
 </style>

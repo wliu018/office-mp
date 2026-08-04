@@ -19,6 +19,12 @@
       </view>
       <view class="project-list">
         <view
+          v-if="projectList.length === 0 && !wdLoading"
+          class="project-empty"
+        >
+          <wd-status-tip image="content" tip="暂无数据" />
+        </view>
+        <view
           v-for="(item, index) in projectList"
           :key="index"
           class="project-card-wrap"
@@ -44,6 +50,9 @@
                   <text>复制</text>
                 </view>
               </view>
+              <view class="project-maintenance-expire">
+                维保到期：{{ item.maintenanceExpireMonth || '-' }}
+              </view>
               <view class="project-market">
                 {{ item.marketing || '未标注市场' }}
               </view>
@@ -61,6 +70,7 @@
 <script setup>
 import { inject, onMounted, ref } from 'vue'
 import { useToast } from 'wot-design-uni'
+import { simpleLoginApi } from '@/api/login/simple-login-api.js'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
 import globalLoading from '@/components/global-loading.vue'
@@ -88,6 +98,7 @@ definePage({
 const scrollY = ref(true)
 const projectList = ref([])
 const selectedProjectKey = ref(null)
+const isCertified = ref(false)
 
 function projectKey(item, index) {
   return String(item?.id ?? item?.serialNumber ?? index)
@@ -106,6 +117,11 @@ async function getProjectList(keywords = '', loading = true) {
   if (loading)
     wdLoading.value = true
   try {
+    if (!isCertified.value) {
+      projectList.value = []
+      selectedProjectKey.value = null
+      return
+    }
     const res = await othersApi.projectList({ openId, keywords })
     console.log(res)
     projectList.value = res || []
@@ -119,8 +135,10 @@ async function getProjectList(keywords = '', loading = true) {
       wdLoading.value = false
   }
 }
-function pageInit() {
-  getProjectList('')
+async function pageInit() {
+  const userInfo = await simpleLoginApi.getEmployeeInfo({ openId })
+  isCertified.value = userInfo?.type === 2
+  await getProjectList('')
 }
 function searchProject(e) {
   wx.vibrateShort({ type: 'heavy' })

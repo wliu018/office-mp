@@ -1,3 +1,7 @@
+.workflow-list-scroll-view {
+  background: #f8f9fa;
+}
+
 .page-container {
   min-height: 100%;
   padding: 20px;
@@ -177,4 +181,55 @@
   line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.workflow-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.workflow-progress-track {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  opacity: 0.7;
+  overflow: visible;
+  border-radius: 999px;
+  background: #e5e5e5;
+}
+
+.workflow-progress-completed,
+.workflow-progress-pending {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+
+.workflow-progress-completed {
+  left: 0;
+  border-radius: 999px;
+  background: #23c16b;
+}
+
+.workflow-progress-pending {
+  display: none;
+}
+
+.workflow-progress-current-anchor {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+}
+
+.workflow-progress-current {
+  display: block;
+  width: 7px;
+  height: 7px;
+  box-sizing: border-box;
+  border: 1px solid #23c16b;
+  border-radius: 50%;
+  background: #f3fbf7;
 }
