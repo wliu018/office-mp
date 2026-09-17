@@ -22,10 +22,10 @@
 </template>
 
 <script>
-import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/store/user'
 
 export default {
+  emits: ['reload', 'file-transfer-scan'],
   data() {
     return {
       currentTab: 0,
@@ -75,6 +75,13 @@ export default {
       wx.scanCode({
         success: (res) => {
           console.log('二维码内容', res)
+
+          const sceneMatch = String(res.path || '').match(/[?&]scene=([^&]+)/)
+          const scene = sceneMatch ? decodeURIComponent(sceneMatch[1]) : ''
+          if (/^ft[\w-]{30}$/.test(scene)) {
+            this.$emit('file-transfer-scan', scene)
+            return
+          }
 
           uni.navigateTo({
             url: `/${res.path}`,

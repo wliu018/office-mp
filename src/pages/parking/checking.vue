@@ -2,7 +2,7 @@
   <div style="height: 0;">
     <wd-navbar
       placeholder left-arrow safe-area-inset-top fixed title="验票结果"
-      style="--wot-navbar-background:transparent;--wot-color-border-light:transparent"
+      style="--wot-navbar-bg: transparent"
       @click-left="uni.navigateBack()"
     />
   </div>
@@ -51,7 +51,7 @@
               </wd-col>
               <wd-col :span="12">
                 <view class="text-right text-[#303032]">
-                  <wd-tag type="primary" custom-class="!text-[14px] !font-600" plain>
+                  <wd-tag type="primary" custom-class="!text-[14px] !font-600" variant="plain">
                     {{ ticketRecord.license_plate_number }}
                   </wd-tag>
                 </view>
@@ -123,9 +123,9 @@
 </template>
 
 <script setup>
+import { useToast } from '@wot-ui/ui'
 import dayjs from 'dayjs'
-import { inject, nextTick, onMounted, reactive, ref } from 'vue'
-import { useToast } from 'wot-design-uni'
+import { inject, onMounted, ref } from 'vue'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
 import { useUserStore } from '@/store/user'
@@ -202,7 +202,7 @@ onUnload(() => {
 </script>
 
 <style lang="scss" scoped>
-@import './scss/parking.scss';
+@use './scss/parking.scss';
 </style>
 
 <style>

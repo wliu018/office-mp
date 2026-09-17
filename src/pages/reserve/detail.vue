@@ -26,7 +26,7 @@ titleHeight.value = navBarHeight
   <div class="relative">
     <scroll-view :enable-back-to-top="true" :style="`height: calc(100vh - ${titleHeight}px);`">
       <view class="container" style="padding-top: 10px;">
-        <wd-status-tip image="message" tip="暂无预订信息" />
+        <wd-empty icon="no-content" tip="暂无预订信息" />
       </view>
     </scroll-view>
   </div>

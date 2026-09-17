@@ -1,7 +1,8 @@
 <template>
   <view class="work-order-share">
-    <wd-button type="primary" custom-class="share-work-order-button" custom-style="background: #05f;" :loading="generating" @click="previewShareImage">
+    <wd-button round type="primary" custom-class="share-work-order-button" custom-style="background: #05f; font-weight: bold;" :loading="generating" @click="previewShareImage">
       分享工单
+      <wd-icon name="share-internal" />
     </wd-button>
     <canvas :id="canvasId" type="2d" class="share-canvas" />
   </view>

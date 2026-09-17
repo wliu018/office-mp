@@ -54,7 +54,7 @@ const props = defineProps({
   showAuth: Boolean,
   txt: String,
 })
-const emit = defineEmits(['loginCallback', 'hide'])
+const emit = defineEmits(['update:showAuth', 'loginCallback', 'hide'])
 const app = getApp()
 const apiUrl = import.meta.env.VITE_SERVER_BASEURL
 const uploadFilePath = `${apiUrl}/file/fileUpload`
@@ -76,12 +76,10 @@ async function close() {
   emit('hide')
 }
 
-function successCallback() {
+function successCallback(avatarUrl) {
   btnLoading.value = false
-  // 登录回调
-  console.log('调用登录回调---------------')
-  emit('hide')
-  emit('loginCallback')
+  showAuthModel.value = false
+  emit('loginCallback', avatarUrl)
 }
 
 // ------------------ wx接口函数 获取手机号码 -------------
@@ -111,7 +109,7 @@ async function getAvatar(e) {
           avatarId: avatarId.value,
         })
         if (row) {
-          successCallback()
+          successCallback(userAvatarUrl.value)
         }
       }
     },

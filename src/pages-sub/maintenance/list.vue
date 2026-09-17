@@ -2,7 +2,7 @@
   <div style="height: 0;">
     <wd-navbar
       placeholder left-arrow safe-area-inset-top fixed title="维保工单列表"
-      style="--wot-navbar-background: transparent; --wot-color-border-light: transparent"
+      style="--wot-navbar-bg: transparent"
       @click-left="uni.navigateBack()"
     />
   </div>
@@ -11,7 +11,10 @@
     class="workflow-list-scroll-view"
     scroll-y
     :enable-back-to-top="true"
+    refresher-enabled
+    :refresher-triggered="refreshing"
     :style="`height: calc(100vh - ${navBarConfig.customNavBarHeight}px);`"
+    @refresherrefresh="refreshWorkflows"
   >
     <view class="page-container">
       <view class="statistics-card">
@@ -19,12 +22,16 @@
           <view class="statistics-title">
             流程统计
           </view>
-          <wd-button size="small" custom-class="create-work-order-button" custom-style="border-radius: 6px; background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%); color: #fff; font-size: 13px; font-weight: 600;" @click="createWorkOrder">
-            <view class="create-work-order-button-content">
-              <wd-icon name="add-circle" color="#fff" size="14px" />
-              <text>新建维保单</text>
+          <view class="statistics-actions">
+            <view class="create-work-order-shine">
+              <wd-button size="small" custom-class="create-work-order-button" custom-style="border-radius: 6px; background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%); color: #fff; font-size: 13px; font-weight: 600;" @click="createWorkOrder">
+                <view class="create-work-order-button-content">
+                  <wd-icon name="plus-circle" color="#fff" size="18px" custom-style="font-weight: bold;" />
+                  <text>新建维保单</text>
+                </view>
+              </wd-button>
             </view>
-          </wd-button>
+          </view>
         </view>
         <view class="statistics-grid">
           <view class="statistics-item pending" @click="openWorkflowList('pending')">
@@ -43,55 +50,67 @@
       </view>
 
       <view class="section-title">
-        <wd-icon name="transfer" size="15px" color="#36bd69" /> 当前待处理流程
+        <wd-icon name="organization" size="15px" color="#36bd69" /> 当前待处理流程
       </view>
-      <view v-if="!loading && workflows.length === 0" class="empty-state">
-        暂无待处理维保工单
+      <view v-if="!loading && workflows.length === 0" class="empty-state pending-empty-state">
+        暂无待处理维保单
       </view>
-      <view v-for="(item, index) in workflows" :key="item.id" class="workflow-card bot-title" :style="{ animationDelay: `${0.2 + index * 0.1}s` }" @click="openWorkOrder(item.id)">
+      <view
+        v-for="(item, index) in workflows"
+        :key="item.id"
+        class="workflow-card bot-title"
+        :style="{ animationDelay: `${0.2 + index * 0.1}s` }"
+        @click="openWorkOrder(item.id)"
+      >
         <view class="card-title">
           <view class="card-title-left">
+            <view class="workflow-order-number">
+              {{ index + 1 }}
+            </view>
             <text class="card-project-name">{{ item.projectName || '-' }}</text>
             <text class="card-id">#{{ item.id }}</text>
           </view>
-          <text class="status">{{ item.currentNodeName || item.currentNodeId || '-' }}</text>
+          <view class="card-title-tags">
+            <global-tip
+              v-if="['重要', '紧急'].includes(item.urgency)"
+              icon="exclamation-circle-fill"
+              :color="urgencyTipColor(item.urgency)"
+              :text="item.urgency || '一般'"
+            />
+          </view>
         </view>
-        <view class="card-detail">
-          <text class="card-detail-label">当前处理人</text>
-          <text class="card-detail-value">{{ item.currentHandlerName || '-' }}</text>
-        </view>
-        <view class="card-detail">
-          <text class="card-detail-label">创建时间</text>
-          <text class="card-detail-value">{{ item.createTime || '-' }}</text>
-        </view>
+        <wd-avatar-group v-if="item.avatars?.length" class="workflow-card-avatars" size="30px" :max-count="5">
+          <wd-avatar
+            v-for="(avatar, avatarIndex) in item.avatars"
+            :key="avatarIndex"
+            :class="{ 'workflow-name-avatar': !avatar.startsWith('http') }"
+            :src="avatar.startsWith('http') ? avatar : ''"
+            :text="avatar.startsWith('http') ? '' : avatar.charAt(0)"
+          />
+        </wd-avatar-group>
         <view v-if="item.workflowProgress != null" class="workflow-progress" aria-label="流程进度">
           <view class="workflow-progress-track">
             <view class="workflow-progress-completed" :style="{ width: `${item.workflowProgress}%` }" />
             <view class="workflow-progress-pending" :style="{ left: `${item.workflowProgress}%` }" />
-            <view v-if="item.showCurrentProgress" class="workflow-progress-current-anchor" :style="{ left: `${item.workflowProgress}%` }">
-              <view class="workflow-progress-current" />
-            </view>
           </view>
         </view>
       </view>
     </view>
   </scroll-view>
-  <loadingBox :show="loading" />
 </template>
 
 <script setup>
 import { inject, ref } from 'vue'
-import { simpleLoginApi } from '@/api/login/simple-login-api.js'
 import { othersApi } from '@/api/others-api'
-import loadingBox from '@/components/global-loading-box.vue'
 import { useUserStore } from '@/store/user'
 
 const navBarConfig = inject('navBarConfig')
 const openId = useUserStore().openId
 const loading = ref(true)
+const refreshing = ref(false)
 const workflows = ref([])
 const statistics = ref({ pending: 0, processed: 0, all: 0 })
-const canCreateWorkOrder = ref(false)
+const pendingEmptyStateCharacters = '暂无待处理维保单'.split('')
 
 definePage({
   style: {
@@ -108,24 +127,30 @@ definePage({
 async function loadWorkflows() {
   loading.value = true
   try {
-    const [pending, result, isMarketPersonnel] = await Promise.all([
+    const [pending, result] = await Promise.all([
       othersApi.workflowInstanceListByOpenId(openId),
       othersApi.workflowInstanceStatisticsByOpenId(openId),
-      simpleLoginApi.isMarketPersonnel({ openId }),
     ])
     workflows.value = await withWorkflowProgress(pending || [])
     statistics.value = result || { pending: 0, processed: 0, all: 0 }
-    canCreateWorkOrder.value = isMarketPersonnel
   }
   catch (error) {
     workflows.value = []
     statistics.value = { pending: 0, processed: 0, all: 0 }
-    canCreateWorkOrder.value = false
     uni.showToast({ title: error?.message || '流程列表加载失败', icon: 'none' })
   }
   finally {
     loading.value = false
   }
+}
+
+async function refreshWorkflows() {
+  if (refreshing.value)
+    return
+  refreshing.value = true
+  uni.vibrateShort()
+  await loadWorkflows()
+  refreshing.value = false
 }
 
 async function withWorkflowProgress(items) {
@@ -141,8 +166,8 @@ async function withWorkflowProgress(items) {
       const isArchived = currentNode?.nodeCode === 'ARCHIVE' || currentNode?.nodeType === 'ARCHIVE' || runtime?.instance?.status === 'ARCHIVED'
       return {
         ...item,
+        urgency: item.urgency || '一般',
         workflowProgress: isArchived ? null : Math.round((currentNodeIndex + 1) / nodes.length * 100),
-        showCurrentProgress: !isArchived,
       }
     }
     catch {
@@ -151,11 +176,15 @@ async function withWorkflowProgress(items) {
   }))
 }
 
+function urgencyTipColor(urgency) {
+  if (urgency === '紧急')
+    return '#fa4350'
+  if (urgency === '重要')
+    return '#f57f00'
+  return '#3d8dff'
+}
+
 function createWorkOrder() {
-  if (!canCreateWorkOrder.value) {
-    uni.showToast({ title: '仅市场人员可新建维保单', icon: 'none' })
-    return
-  }
   uni.navigateTo({ url: '/pages-sub/maintenance/maintenance' })
 }
 
@@ -178,5 +207,5 @@ onShow(async () => {
 </script>
 
 <style lang="scss" scoped>
-@import './scss/list.scss';
+@use './scss/list.scss';
 </style>

@@ -1,8 +1,12 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { useDialog } from '@wot-ui/ui'
+import { computed, inject, reactive, ref } from 'vue'
+import { fileTransferApi } from '@/api/file-transfer-api'
+import { simpleLoginApi } from '@/api/login/simple-login-api'
 import { othersApi } from '@/api/others-api'
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import globalLoading from '@/components/global-loading.vue'
+import WeatherCard from '@/components/weather-card.vue'
 import { useUserStore } from '@/store/user'
 
 defineOptions({
@@ -30,6 +34,12 @@ onShareAppMessage((res) => {
   }
 })
 const globalLoadingShow = ref(false)
+let isFileTransferScan = false
+let handledFileTransferScene = ''
+const showMeetingReservation = false
+const navBarConfig = inject('navBarConfig', { customNavBarHeight: 0 })
+const weather = ref(null)
+const homeHeaderContentTop = ref(navBarConfig.statusBarHeight + navBarConfig.navBarHeight / 2)
 
 const defaultCustomRouteConfig = {
   opaque: false,
@@ -73,10 +83,22 @@ const rootParams = reactive({ type: 'fade', duration: 350, closedElevation: 0, c
 // ---------------------- 生命周期函数 ------------------------
 const surplusTicket = ref(0)
 const maintenancePending = ref(0)
+const employeeCertificationPending = ref(0)
 const ticketRecord = ref([])
 const reserveList = ref([])
+const employeeCertificationAdminOpenIds = new Set([
+  'opWlq1_L2wQaia7p93MM9-QcAiOg',
+  'opWlq14br_ZPuThxqgIAVUAWT4wI',
+  'opWlq16rZlGEdv9GJJOC82icsHbk',
+])
+const userStore = useUserStore()
+const dialog = useDialog('file-transfer')
+const canViewEmployeeCertification = computed(() => employeeCertificationAdminOpenIds.has(userStore.openId))
+
 onShow(async () => {
   await uni.$onLaunched
+  handleFileTransferScene(wx.getEnterOptionsSync?.()?.query?.scene)
+  loadWeather()
   othersApi.surplusTicket().then((res) => {
     surplusTicket.value = res
     console.log('剩余票数:', res)
@@ -86,6 +108,17 @@ onShow(async () => {
   }).catch(() => {
     maintenancePending.value = 0
   })
+  if (canViewEmployeeCertification.value) {
+    simpleLoginApi.employeeCertificationPage().then((res) => {
+      const records = res?.records || []
+      employeeCertificationPending.value = records.filter(item => item?.status === '未认证' || item?.status === '待认证' || Number(item?.type) === 1).length
+    }).catch(() => {
+      employeeCertificationPending.value = 0
+    })
+  }
+  else {
+    employeeCertificationPending.value = 0
+  }
   othersApi.getTicketRecord({ openId: useUserStore().openId }).then((res) => {
     ticketRecord.value = res
     console.log('票数记录:', res)
@@ -95,11 +128,104 @@ onShow(async () => {
     console.log('预约列表:', res)
   })
 })
-onLoad(() => {
+
+async function loadWeather() {
+  weather.value = null
+  try {
+    const setting = await new Promise((resolve, reject) => {
+      uni.getSetting({ success: resolve, fail: reject })
+    })
+    if (setting.authSetting?.['scope.userLocation'] !== true)
+      return
+
+    let location
+    try {
+      location = await getWeatherLocation()
+    }
+    catch (error) {
+      console.warn('[天气] 地址获取失败，使用上海市', error)
+      location = { city: '上海市', district: '' }
+    }
+    if (location.city !== '上海市')
+      location = { city: '上海市', district: '' }
+
+    weather.value = await othersApi.weatherCondition(location)
+  }
+  catch (error) {
+    console.error('[天气] 后端请求失败', error)
+  }
+}
+
+function getWeatherLocation() {
+  return new Promise((resolve, reject) => {
+    uni.getLocation({
+      type: 'gcj02',
+      success: ({ latitude, longitude }) => {
+        wx.request({
+          url: `https://apis.map.qq.com/ws/geocoder/v1/?location=${latitude},${longitude}&key=DR2BZ-TXMEV-WTNPD-5TVTY-CKXM2-QYFUW`,
+          success: ({ data }) => {
+            const address = data?.result?.address_component
+            if (data?.status === 0 && address?.city) {
+              resolve({ city: address.city, district: address.district || '' })
+              return
+            }
+            reject(new Error(data?.message || '地址解析失败'))
+          },
+          fail: reject,
+        })
+      },
+      fail: reject,
+    })
+  })
+}
+
+async function authorizeFileTransfer(scene) {
+  let msg = '成功'
+  try {
+    await userStore.silentLogin()
+    await fileTransferApi.authorize(scene)
+  }
+  catch (error) {
+    const message = error?.data?.msg || error?.data?.message || error?.message || '网络异常，请稍后重试'
+    if (/过期|已使用/.test(message)) {
+      msg = '已过期'
+    }
+    else if (/仅员工认证已通过|认证未通过|未认证/.test(message)) {
+      msg = '未认证'
+    }
+    else {
+      msg = '失败'
+    }
+    toast.error(msg)
+  }
+  // const exitMiniProgram = () => uni.exitMiniProgram()
+  // dialog.confirm({ title: msg, msg: '扫码成功' }).then(exitMiniProgram, exitMiniProgram)
+}
+
+function handleFileTransferScene(rawScene) {
+  let scene = ''
+  try {
+    scene = decodeURIComponent(rawScene || '')
+  }
+  catch {}
+  if (!/^ft[\w-]{30}$/.test(scene) || scene === handledFileTransferScene)
+    return false
+  handledFileTransferScene = scene
+  isFileTransferScan = true
+  authorizeFileTransfer(scene)
+  return true
+}
+
+onLoad((options) => {
+  const menuButton = uni.getMenuButtonBoundingClientRect?.()
+  if (menuButton?.height)
+    homeHeaderContentTop.value = menuButton.top + menuButton.height / 2
+  handleFileTransferScene(options?.scene)
   console.log('测试 uni API 自动引入: onLoad')
 })
 onMounted(async () => {
-  await reloadHomePage()
+  if (!isFileTransferScan)
+    await reloadHomePage()
 })
 
 async function reloadHomePage() {
@@ -143,6 +269,10 @@ function parkingCoupon(item) {
 
 function maintenance() {
   navigateWithZoom('/pages-sub/maintenance/list')
+}
+
+function employeeCertification() {
+  navigateWithZoom('/pages-sub/employee-certification/list')
 }
 
 function checkCoupon(item) {
@@ -286,6 +416,12 @@ function go2details(i) {
 
 <template>
   <div class="content-wrapper home-page min-h-[100vh] flex flex-col items-center">
+    <view class="home-header" :style="`height: ${navBarConfig.customNavBarHeight}px;`">
+      <image class="home-header-logo" :style="{ top: `${homeHeaderContentTop}px` }" src="/static/images/loading/b_logo.svg" mode="heightFix" />
+      <view v-if="weather" class="home-header-weather" :style="{ top: `${homeHeaderContentTop}px` }">
+        <WeatherCard :weather="weather" />
+      </view>
+    </view>
     <swiper
       :current="current" style="width: 100vw; height: 30vh;"
       :autoplay="true" :interval="2500" :circular="false"
@@ -305,7 +441,7 @@ function go2details(i) {
 
     <!-- 菜单 -->
     <div class="menu-wrapper">
-      <div class="menu-item" @tap="appointment">
+      <div v-if="showMeetingReservation" class="menu-item" @tap="appointment">
         <image src="/static/images/index/meeting-1.png" class="shadow-blur" mode="widthFix" />
         <div class="menu-name">
           会议室预订
@@ -330,11 +466,19 @@ function go2details(i) {
       </open-container>
 
       <div class="menu-item" @tap="maintenance">
-        <wd-badge :model-value="maintenancePending" show-zero>
+        <wd-badge :value="maintenancePending" show-zero>
           <image src="/static/images/index/signIn-3.png" mode="widthFix" />
         </wd-badge>
         <div class="menu-name">
           项目维保
+        </div>
+      </div>
+      <div v-if="canViewEmployeeCertification" class="menu-item" @tap="employeeCertification">
+        <wd-badge :value="employeeCertificationPending" show-zero>
+          <image src="/static/images/index/meeting-1.png" class="shadow-blur" mode="widthFix" />
+        </wd-badge>
+        <div class="menu-name">
+          认证申请
         </div>
       </div>
       <div class="menu-item" @tap="feedback">
@@ -360,7 +504,7 @@ function go2details(i) {
         :key="index"
         class="mb-1 mr-5" @click="go2details(index)"
       >
-        <wd-badge model-value="9:00" style="--wot-badge-border1: 0">
+        <wd-badge value="9:00">
           <wd-button :round="false" size="small" custom-class="btn-custom-class">
             {{ `1${index}` }}
           </wd-button>
@@ -369,7 +513,7 @@ function go2details(i) {
     </div> -->
       <scroll-view :scroll-y="true" :enable-back-to-top="true" style="height: calc(100vh - 30vh - 102px);">
         <div style="padding-bottom: calc(10vh + 2vh);" class="index-content-wrapper">
-          <div class="section-wrapper box-border">
+          <div v-if="showMeetingReservation" class="section-wrapper box-border">
             <div class="section-title font-bold">
               会议室预订记录
               <div class="more flex flex-row items-center" @tap="moreDetails(1)">
@@ -393,10 +537,10 @@ function go2details(i) {
                   </div>
                 </div>
               </template>
-              <wd-status-tip v-else image="content" tip="暂无内容" />
+              <wd-empty v-else icon="no-content" tip="暂无内容" />
             </div>
           </div>
-          <div class="section-wrapper box-border">
+          <div v-if="showMeetingReservation" class="section-wrapper box-border">
             <div class="section-title font-bold">
               停车券领取记录
               <div class="more flex flex-row items-center" @tap="moreDetails(2)">
@@ -410,12 +554,12 @@ function go2details(i) {
                 </wd-cell>
               </wd-cell-group>
             </template>
-            <wd-status-tip v-else image="content" tip="暂无内容" />
+            <wd-empty v-else icon="no-content" tip="暂无内容" />
           </div>
         </div>
       </scroll-view>
       <globalLoading :show="globalLoadingShow" />
-      <CustomTabBar v-if="!globalLoadingShow" @reload="reloadHomePage" />
+      <CustomTabBar v-if="!globalLoadingShow" @reload="reloadHomePage" @file-transfer-scan="handleFileTransferScene" />
     </div>
   </div>
 </template>
@@ -435,5 +579,5 @@ page {
 </style>
 
 <style lang="scss" scoped>
-@import './scss/index.scss';
+@use './scss/index.scss';
 </style>

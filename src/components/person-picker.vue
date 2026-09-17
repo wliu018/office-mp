@@ -2,7 +2,7 @@
   <view v-if="candidates.length" class="person-picker" @click="open">
     <view class="person-picker-summary">
       <view class="person-picker-add-icon">
-        <wd-icon name="add" color="#fff" size="12px" />
+        <wd-icon name="plus" color="#fff" size="12px" />
       </view>
       <text v-if="selectedNames" class="person-picker-selected">{{ selectedNames }}</text>
       <text v-else class="person-picker-placeholder">{{ placeholder }}</text>
@@ -16,13 +16,14 @@
     v-model="visible"
     position="bottom"
     safe-area-inset-bottom
-    custom-style="height: 72vh; border-radius: 24rpx 24rpx 0 0;"
+    root-portal
+    :custom-style="popupStyle"
     @close="close"
   >
     <view class="person-picker-panel">
       <view class="person-picker-header">
         <text class="person-picker-title">{{ title }}</text>
-        <text class="person-picker-done" @click.stop="close">完成</text>
+        <text v-if="multiple" class="person-picker-done" @click.stop="close">完成</text>
       </view>
       <view class="person-picker-search-row">
         <view v-if="$slots['search-prefix']" class="person-picker-search-prefix" :style="{ flex: `0 0 ${searchPrefixWidth}`, width: searchPrefixWidth }">
@@ -37,29 +38,74 @@
           @click.stop
         />
       </view>
-      <view class="person-picker-toolbar">
-        <text v-if="multiple" class="person-picker-select-all" @click.stop="toggleAll">{{ allVisibleSelected ? '取消全选' : '全选当前结果' }}</text>
+      <view v-if="multiple" class="person-picker-toolbar">
+        <text class="person-picker-select-all" @click.stop="toggleAll">{{ allVisibleSelected ? '取消全选' : '全选当前结果' }}</text>
       </view>
-      <scroll-view scroll-y class="person-picker-list">
-        <view v-for="person in filteredCandidates" :key="personId(person)" class="person-picker-row">
-          <wd-checkbox :model-value="selected(person)" :checked-color="checkedColor" :size="checkboxSize" shape="square" @change="toggle(person)">
-            <view class="person-picker-info">
-              <view class="person-picker-avatar">
-                {{ itemLabel(person).slice(0, 1) }}
-              </view>
-              <view class="person-picker-card-content">
-                <text class="person-picker-name">{{ itemLabel(person) }}</text>
-                <view v-if="itemDetail(person) || itemPhone(person)" class="person-picker-detail">
-                  <text v-if="itemDetail(person)">{{ itemDetail(person) }}</text>
-                  <view v-if="itemPhone(person)" class="person-picker-phone" @tap.stop="emit('phone-click', itemPhone(person))">
-                    <wd-icon name="phone" size="13px" color="#05f" />
-                    <text>{{ itemPhone(person) }}</text>
+      <scroll-view scroll-y class="person-picker-list" :style="{ height: listHeight }">
+        <template v-if="multiple">
+          <view v-for="person in filteredCandidates" :key="personId(person)" class="person-picker-row">
+            <wd-checkbox :model-value="selected(person)" :checked-color="checkedColor" :size="checkboxSize" type="square" @change="toggle(person)">
+              <view class="person-picker-info">
+                <wd-avatar
+                  class="person-picker-avatar"
+                  :class="{ 'person-picker-name-avatar': !avatarUrl(person) }"
+                  size="42px"
+                  :src="avatarUrl(person)"
+                  :text="avatarUrl(person) ? '' : avatarText(person)"
+                  :bg-color="avatarUrl(person) ? '' : '#fff8d9'"
+                  :color="avatarUrl(person) ? '' : '#f39a23'"
+                  custom-style="font-size: 18px; font-weight: 600;"
+                />
+                <view class="person-picker-card-content">
+                  <text class="person-picker-name">{{ itemLabel(person) }}</text>
+                  <view v-if="itemDetail(person) || itemPhone(person)" class="person-picker-detail">
+                    <text v-if="itemDetail(person)">{{ itemDetail(person) }}</text>
+                    <view v-if="itemPhone(person)" class="person-picker-phone" @tap.stop="emit('phone-click', itemPhone(person))">
+                      <wd-icon name="mobile" size="13px" color="#05f" />
+                      <text>{{ itemPhone(person) }}</text>
+                    </view>
                   </view>
                 </view>
               </view>
-            </view>
-          </wd-checkbox>
-        </view>
+            </wd-checkbox>
+          </view>
+        </template>
+        <wd-radio-group
+          v-else
+          :model-value="singleSelectedId"
+          type="dot"
+          :checked-color="checkedColor"
+          :size="checkboxSize"
+          placement="left"
+          @update:model-value="selectSingle"
+        >
+          <view v-for="person in filteredCandidates" :key="personId(person)" class="person-picker-row">
+            <wd-radio :value="personId(person)">
+              <view class="person-picker-info">
+                <wd-avatar
+                  class="person-picker-avatar"
+                  :class="{ 'person-picker-name-avatar': !avatarUrl(person) }"
+                  size="42px"
+                  :src="avatarUrl(person)"
+                  :text="avatarUrl(person) ? '' : avatarText(person)"
+                  :bg-color="avatarUrl(person) ? '' : '#fff8d9'"
+                  :color="avatarUrl(person) ? '' : '#f39a23'"
+                  custom-style="font-size: 18px; font-weight: 600;"
+                />
+                <view class="person-picker-card-content">
+                  <text class="person-picker-name">{{ itemLabel(person) }}</text>
+                  <view v-if="itemDetail(person) || itemPhone(person)" class="person-picker-detail">
+                    <text v-if="itemDetail(person)">{{ itemDetail(person) }}</text>
+                    <view v-if="itemPhone(person)" class="person-picker-phone" @tap.stop="emit('phone-click', itemPhone(person))">
+                      <wd-icon name="mobile" size="13px" color="#05f" />
+                      <text>{{ itemPhone(person) }}</text>
+                    </view>
+                  </view>
+                </view>
+              </view>
+            </wd-radio>
+          </view>
+        </wd-radio-group>
         <view v-if="!filteredCandidates.length" class="person-picker-no-result">
           未找到匹配数据
         </view>
@@ -88,12 +134,19 @@ const props = defineProps({
   searchPrefixWidth: { type: String, default: '25%' },
   emptyText: { type: String, default: '暂无可选人员' },
 })
-const emit = defineEmits(['update:modelValue', 'phone-click'])
+const emit = defineEmits(['update:modelValue', 'phone-click', 'open', 'select'])
 const visible = ref(false)
 const keyword = ref('')
 
 const personId = person => String(person?.id ?? person?.userId ?? '')
 const itemLabel = item => String(item?.[props.labelKey] ?? item?.name ?? '-')
+function avatarUrl(item) {
+  const avatar = String(item?.avatar || '')
+  return /^https?:\/\//i.test(avatar) ? avatar : ''
+}
+function avatarText(item) {
+  return itemLabel(item).trim().slice(0, 1) || '-'
+}
 function itemDetail(item) {
   return props.detailKeys
     .filter(key => key !== props.phoneKey)
@@ -117,12 +170,16 @@ const selectedNames = computed(() => props.candidates
   .filter(person => props.modelValue.includes(personId(person)))
   .map(itemLabel)
   .join(', '))
+const singleSelectedId = computed(() => props.modelValue[0] || '')
+const popupStyle = computed(() => 'height: 75vh; border-radius: 24rpx 24rpx 0 0; overflow: hidden;')
+const listHeight = computed(() => 'calc(75vh - 150px)')
 const allVisibleSelected = computed(() => filteredCandidates.value.length > 0
   && filteredCandidates.value.every(selected))
 
 function open() {
   keyword.value = ''
   visible.value = true
+  emit('open')
 }
 
 function close() {
@@ -138,6 +195,7 @@ function toggle(person) {
   const id = personId(person)
   if (!id)
     return
+  emit('select')
   if (!props.multiple) {
     emit('update:modelValue', selected(person) ? [] : [id])
     return
@@ -145,6 +203,14 @@ function toggle(person) {
   emit('update:modelValue', selected(person)
     ? props.modelValue.filter(item => item !== id)
     : [...props.modelValue, id])
+}
+
+function selectSingle(id) {
+  if (!id)
+    return
+  emit('select')
+  emit('update:modelValue', [String(id)])
+  close()
 }
 
 function toggleAll() {
@@ -188,13 +254,12 @@ function toggleAll() {
 }
 
 .person-picker-avatar {
-  display: flex;
   flex: none;
-  align-items: center;
-  justify-content: center;
   width: 42px;
   height: 42px;
-  border-radius: 50%;
+}
+
+.person-picker-name-avatar {
   background: #fff8d9;
   color: #f39a23;
   font-size: 18px;
@@ -239,14 +304,17 @@ function toggleAll() {
   flex: 1;
   min-width: 0;
   margin: 20px 0;
-  border-radius: 8px;
-  background: #f7f8fa;
+  border-radius: 8px !important;
+  background: #f5f6f8 !important;
+  overflow: hidden;
 }
 
 :deep(.person-picker-search--large) {
   min-height: 48px;
-  border-radius: 5px;
-  background: #f6f6f7;
+}
+
+:deep(.person-picker-search .wd-input__inner) {
+  background: #f5f6f8 !important;
 }
 
 .person-picker-search-row {
@@ -275,12 +343,38 @@ function toggleAll() {
   min-width: 0;
 }
 
+:deep(.person-picker-row .wd-radio) {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 58px;
+}
+
+:deep(.person-picker-row .wd-radio__label) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 30px;
+  display: block;
+}
+
+:deep(.person-picker-row .wd-radio .person-picker-info) {
+  width: auto;
+  margin-left: 8px;
+}
+
+:deep(.person-picker-row .wd-radio__shape) {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
 .person-picker-info {
   display: flex;
   align-items: center;
   min-height: 58px;
-  width: calc(100vw - 180rpx);
-  margin-left: 8px;
+  width: calc(100vw - 130rpx);
   gap: 10px;
   vertical-align: middle;
 }
@@ -289,8 +383,10 @@ function toggleAll() {
   display: flex;
   flex: 1;
   flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
   gap: 4px;
+  text-align: left;
 }
 
 .person-picker-name {

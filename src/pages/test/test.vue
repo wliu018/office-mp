@@ -1,7 +1,7 @@
 <script setup>
+import { useToast } from '@wot-ui/ui'
 import dayjs from 'dayjs'
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
-import { useToast } from 'wot-design-uni'
 import { othersApi } from '@/api/others-api'
 // 引入时间选择网格组件
 import TimeGrid from '@/components/time-grid.vue'
@@ -312,7 +312,7 @@ function go2details(i = 6) {
 
           <template #footer>
             <view>
-              <wd-button size="small" custom-class="background-05f" color="#05f" @click="showActions">
+              <wd-button round size="small" custom-class="background-05f" color="#05f" @click="showActions">
                 更换会议室
               </wd-button>
             </view>
@@ -410,7 +410,7 @@ function go2details(i = 6) {
 </template>
 
 <style lang="scss" scoped>
-@import 'scss/test.scss';
+@use 'scss/test.scss';
 </style>
 
 <style>

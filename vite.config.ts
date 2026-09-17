@@ -153,6 +153,12 @@ export default defineConfig(({ command, mode }) => {
       __VITE_APP_PROXY__: JSON.stringify(VITE_APP_PROXY_ENABLE),
     },
     css: {
+      preprocessorOptions: {
+        scss: {
+          api: 'modern-compiler',
+          silenceDeprecations: ['legacy-js-api'],
+        },
+      },
       postcss: {
         plugins: [
           // autoprefixer({

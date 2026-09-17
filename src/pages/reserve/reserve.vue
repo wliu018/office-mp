@@ -1,7 +1,7 @@
 <script setup>
+import { useToast } from '@wot-ui/ui'
 import dayjs from 'dayjs'
 import { nextTick, onMounted, reactive, ref } from 'vue'
-import { useMessage, useToast } from 'wot-design-uni'
 import { othersApi } from '@/api/others-api'
 import TimeGrid from '@/components/time-grid.vue'
 import { useUserStore } from '@/store/user'
@@ -9,7 +9,6 @@ import { useUserStore } from '@/store/user'
 const openId = useUserStore().openId
 const toast = useToast()
 const dateValue = ref(0)
-const message = useMessage()
 
 definePage({
   style: {
@@ -388,7 +387,7 @@ function go2details(i = 6) {
 
           <template #footer>
             <view>
-              <wd-button size="small" custom-class="background-05f" color="#05f" @click="showActions">
+              <wd-button round size="small" custom-class="background-05f" color="#05f" @click="showActions">
                 更换会议室
               </wd-button>
             </view>
@@ -452,7 +451,7 @@ function go2details(i = 6) {
               </view>
             </view> -->
             <view>
-              <wd-radio-group v-model="dateValue" inline shape="dot" @change="changeDate">
+              <wd-radio-group v-model="dateValue" direction="horizontal" type="dot" @change="changeDate">
                 <div class="align-items-center flex flex-row pb-2 space-x-1">
                   <wd-radio v-for="item in reserveDays" :key="item.num" :value="item.num">
                     <div class="flex flex-row items-center">
@@ -499,11 +498,13 @@ function go2details(i = 6) {
 </template>
 
 <style lang="scss" scoped>
- @import 'scss/reserve.scss';
+ @use 'scss/reserve.scss';
 </style>
 
 <style>
 page {
+  --wot-checkbox-color-checked: #05f;
+  --wot-radio-checked-color: #5c7eee;
   background: #edf1f6;
   box-sizing: border-box;
 }
@@ -518,18 +519,6 @@ page {
   display: flex !important;
   align-items: center !important;
 }
-.wd-checkbox.is-checked .wd-checkbox__shape {
-  background-color: #05f !important;
-  border-color: #05f !important;
-}
-.wd-radio.is-dot.is-checked .wd-radio__shape {
-  background-color: #5c7eee !important;
-  border-color: #5c7eee !important;
-  margin-top: 0 !important;
-}
-.wd-radio.is-inline.is-dot .wd-radio__shape {
-  margin-top: 0 !important;
-}
 .wd-radio {
   display: flex !important;
   justify-content: flex-start !important;
@@ -540,7 +529,7 @@ page {
 }
 .custom-content-class {
 }
-.wd-message-custom-class {
+.wd-dialog-custom-class {
   border-radius: 20px !important;
   overflow: hidden !important;
 }

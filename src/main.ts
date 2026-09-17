@@ -4,6 +4,7 @@ import { requestInterceptor } from './http/interceptor'
 import { routeInterceptor } from './router/interceptor'
 
 import store from './store'
+import 'animate.css'
 import '@/style/index.scss'
 import 'virtual:uno.css'
 

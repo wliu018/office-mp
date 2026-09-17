@@ -6,7 +6,7 @@
       safe-area-inset-top
       fixed
       :title="isDetail ? '维保工单详情' : '新建维保单'"
-      style="--wot-navbar-background: transparent; --wot-color-border-light: transparent"
+      style="--wot-navbar-bg: transparent"
       @click-left="handleBack"
     />
   </div>
@@ -27,31 +27,47 @@
               工单信息
             </view>
             <view class="work-order-tags">
-              <view class="work-order-tag">
-                <wd-icon name="error-circle-filled" size="15px" color="#3d8dff" />
-                <text>{{ currentNode?.nodeName || currentNode?.nodeCode || '-' }}</text>
-              </view>
-              <view class="work-order-tag" @tap="openFlowStatus">
-                <wd-icon name="transfer" size="15px" color="#36bd69" />
-                <text>查看流程图</text>
-              </view>
+              <global-tip icon="info-circle-fill" :text="currentNode?.nodeName || currentNode?.nodeCode || '-'" />
+              <global-tip icon="swap" color="#36bd69" text="查看流程图" @tap="openFlowStatus" />
             </view>
           </view>
-          <view class="info-row">
-            <text>项目</text><text>{{ form.projectName || '-' }}</text>
+          <view class="work-order-project-name">
+            <text
+              v-for="(character, index) in projectNameCharacters"
+              :key="`${character}-${index}`"
+              class="work-order-project-name-character"
+              :style="{ animationDelay: `${index * 0.06}s` }"
+            >
+              {{ character }}
+            </text>
           </view>
-          <view class="info-row">
-            <text>紧急程度</text><text>{{ form.urgency || '一般' }}</text>
+          <view class="info-row urgency-info-row">
+            <text>紧急程度</text>
+            <wd-tag v-if="form.urgency === '重要'" type="warning" custom-class="urgency-tag">
+              重要
+            </wd-tag>
+            <wd-tag v-else-if="form.urgency === '紧急'" type="danger" custom-class="urgency-tag">
+              紧急
+            </wd-tag>
+            <wd-tag v-else type="primary" custom-class="urgency-tag">
+              一般
+            </wd-tag>
           </view>
           <view class="info-row">
             <text>维护分类</text><text>{{ form.maintenanceCategory || '硬件' }}</text>
           </view>
+          <view class="info-row">
+            <text>服务方式</text><text>{{ isRemoteService ? '远程' : '上门' }}</text>
+          </view>
           <view class="field-title">
             故障描述
           </view>
-          <view class="readonly-text">
-            {{ form.faultDescription || '-' }}
-          </view>
+          <wd-textarea
+            :model-value="form.faultDescription || '-'"
+            readonly
+            auto-height
+            custom-class="readonly-textarea"
+          />
           <view class="info-row contact-info-row">
             <text>联系人</text><text>{{ form.contactName || '-' }}</text>
           </view>
@@ -59,7 +75,7 @@
             <text>联系电话</text>
             <template v-if="form.contactPhone">
               <view class="phone-action" @tap="callPhone(form.contactPhone)">
-                <wd-icon name="phone" size="14px" color="#05f" />
+                <wd-icon name="mobile" size="14px" color="#05f" />
                 <text>{{ form.contactPhone }}</text>
               </view>
             </template>
@@ -80,7 +96,7 @@
 
         <view v-if="onsitePersons.length" class="section-card onsite-person-card">
           <view class="section-title">
-            已选到场人员
+            已选处理人员
           </view>
           <view v-for="person in onsitePersons" :key="person.userId" class="person-row">
             <view class="person-avatar">
@@ -91,7 +107,7 @@
               <view class="person-contact">
                 <text>{{ person.companyName || '-' }}</text>
                 <view class="person-phone phone-action" @tap.stop="callPhone(person.phoneNumber)">
-                  <wd-icon name="phone" size="14px" color="#05f" />
+                  <wd-icon name="mobile" size="14px" color="#05f" />
                   <text>{{ person.phoneNumber || '-' }}</text>
                 </view>
               </view>
@@ -108,14 +124,28 @@
             <view class="field-title">
               下一节点处理人
             </view>
-            <person-picker v-model="selectedNextCandidateIds" :candidates="nextCandidates" :multiple="false" placeholder="请选择处理人" @phone-click="callPhone" />
+            <person-picker v-model="selectedNextCandidateIds" :candidates="nextCandidates" :multiple="false" placeholder="请选择处理人" @open="vibrateLight" @select="vibrateLight" @phone-click="callPhone" />
           </view>
 
-          <view v-if="currentNodeCode === 'OWNER_ASSIGN'" class="field-block">
+          <view v-if="currentNodeCode === 'OWNER_ASSIGN'" class="field-block" style="margin-bottom: 20px;">
+            <view class="field-title">
+              服务方式
+            </view>
+            <wd-radio-group v-model="actionForm.serviceMode" size="large" class="maintenance-radio-options" direction="horizontal" type="button">
+              <wd-radio value="ONSITE">
+                上门
+              </wd-radio>
+              <wd-radio value="REMOTE">
+                远程
+              </wd-radio>
+            </wd-radio-group>
+          </view>
+
+          <view v-if="currentNodeCode === 'OWNER_ASSIGN'" class="field-block" style="margin-bottom: 20px;">
             <view class="field-title">
               维护分类
             </view>
-            <wd-radio-group v-model="actionForm.maintenanceCategory" class="maintenance-category-options" inline shape="dot">
+            <wd-radio-group v-model="actionForm.maintenanceCategory" size="large" class="maintenance-category-options maintenance-radio-options" style="--wot-radio-horizontal-margin: 0 10px 0 0;" direction="horizontal" type="button" @change="rememberMaintenanceCategory">
               <wd-radio value="硬件">
                 硬件
               </wd-radio>
@@ -125,8 +155,11 @@
               <wd-radio value="装饰">
                 装饰
               </wd-radio>
-              <wd-radio value="广告">
-                广告
+              <wd-radio value="道具">
+                道具
+              </wd-radio>
+              <wd-radio value="模型">
+                模型
               </wd-radio>
               <wd-radio value="平面">
                 平面
@@ -134,11 +167,11 @@
             </wd-radio-group>
           </view>
 
-          <view v-if="currentNodeCode === 'OWNER_ASSIGN'" class="field-block">
+          <view v-if="currentNodeCode === 'OWNER_ASSIGN'" class="field-block" style="margin-bottom: 20px;">
             <view class="field-title">
               流转方式
             </view>
-            <wd-radio-group v-model="ownerFlowMode" inline shape="dot">
+            <wd-radio-group v-model="ownerFlowMode" size="large" class="maintenance-radio-options" direction="horizontal" type="button">
               <wd-radio value="NEXT_NODE">
                 选择处理人
               </wd-radio>
@@ -150,12 +183,31 @@
               <person-picker v-model="selectedOwnerTargetIds" :candidates="ownerCandidates" :multiple="false" placeholder="请选择负责人" @phone-click="callPhone" />
             </view>
             <view v-else class="field-block mt-3">
-              <person-picker v-model="selectedNextCandidateIds" :candidates="nextCandidates" :multiple="false" placeholder="请选择处理人" @phone-click="callPhone" />
+              <person-picker v-model="selectedNextCandidateIds" :candidates="nextCandidates" :multiple="false" placeholder="请选择处理人" @open="vibrateLight" @select="vibrateLight" @phone-click="callPhone" />
             </view>
           </view>
 
           <view v-if="currentNodeCode === 'ONSITE_ARRIVE'" class="field-block">
-            <wd-button block type="info" custom-style="margin-top: 12px;" :loading="scanning" @click="scanOnsiteCode">
+            <view class="onsite-transfer-switch">
+              <view class="field-title">
+                重新指定处理人
+              </view>
+              <wd-switch v-model="onsiteTransferEnabled" />
+            </view>
+            <person-picker
+              v-if="onsiteTransferEnabled"
+              v-model="selectedOnsiteTransferUserIds"
+              :candidates="onsiteTransferCandidates"
+              :multiple="false"
+              placeholder="请选择处理人"
+              @open="vibrateLight"
+              @select="vibrateLight"
+              @phone-click="callPhone"
+            />
+          </view>
+
+          <view v-if="currentNodeCode === 'ONSITE_ARRIVE' && !onsiteTransferEnabled && !isRemoteService" class="field-block">
+            <wd-button round block type="info" custom-style="margin-top: 12px;" :loading="scanning" @click="scanOnsiteCode">
               <wd-icon name="scan" color="#37C062" size="18px" custom-style="margin-right: 6px;" />
               {{ onsiteCode ? '重新扫描现场维保码' : '扫描现场维保码' }}
             </wd-button>
@@ -179,7 +231,7 @@
             <view class="field-title">
               解决结果
             </view>
-            <wd-radio-group v-model="actionForm.solutionResult" class="solution-result-options" inline shape="dot">
+            <wd-radio-group v-model="actionForm.solutionResult" class="solution-result-options maintenance-radio-options" direction="horizontal" type="button">
               <wd-radio :value="1" size="large">
                 已恢复，保持观察
               </wd-radio>
@@ -202,16 +254,19 @@
             />
           </view>
 
-          <view v-if="currentNodeCode !== 'OWNER_ASSIGN'" class="field-block">
+          <view v-if="currentNodeCode !== 'OWNER_ASSIGN' && !isOnsiteTransferMode" class="field-block">
             <view class="field-title">
               {{ attachmentLabel }}
             </view>
             <wd-upload
               v-model:file-list="actionFileList"
               :limit="9"
+              :multiple="true"
               accept="media"
+              image-mode="aspectFill"
               :reupload="false"
               :upload-method="customActionUpload"
+              :before-preview="handleMediaPreview"
               :show-limit-num="false"
               loading-color="#5252ff"
               custom-class="maintenance-media-upload"
@@ -227,7 +282,8 @@
               v-if="currentNodeCode === 'ONSITE_FINISH' && actionForm.solutionResult === 2"
               type="info"
               :loading="submitting"
-              @click="submitAction(currentNodeCode === 'ONSITE_FINISH' ? 'RETURN' : 'SUBMIT')"
+              :disabled="submitting"
+              @click="debouncedSubmitAction('RETURN')"
             >
               退回负责人
             </wd-button>
@@ -236,22 +292,23 @@
               type="primary"
               custom-class="flow-submit-button"
               :loading="submitting"
-              @click="submitAction(currentNodeCode === 'ONSITE_FINISH' ? 'ARCHIVE' : 'SUBMIT')"
+              :disabled="submitting"
+              @click="debouncedSubmitAction(isOnsiteTransferMode ? 'TRANSFER' : isArchiveNode ? 'ARCHIVE' : 'SUBMIT')"
             >
-              {{ currentNodeCode === 'ONSITE_FINISH' ? '归档工单' : '处理' }}
+              {{ isOnsiteTransferMode ? '重新指定' : isArchiveNode ? '归档工单' : '处理' }}
             </wd-button>
           </view>
         </view>
 
         <view v-if="canShowRecall" class="recall-button">
-          <wd-button custom-class="recall-button-control" :loading="submitting" @click="recallAndReassign">
+          <wd-button custom-class="recall-button-control" :loading="submitting" :disabled="submitting" @click="debouncedRecallAndReassign">
             撤回
           </wd-button>
         </view>
 
         <view v-if="actionHistoryGroups.length" class="section-card history-card">
           <view class="section-title">
-            流程
+            流程信息
           </view>
           <view
             v-for="(group, index) in actionHistoryGroups"
@@ -269,8 +326,11 @@
                 <text class="history-node-name">{{ group.label }}</text>
                 <text class="history-node-time">{{ group.createTime || '-' }}</text>
               </view>
-              <view v-if="group.handlerUserName || group.remark" class="history-node-detail">
+              <view v-if="group.handlerUserName || group.remark || group.handlerPhone" class="history-node-detail">
                 <text>{{ group.handlerUserName || '-' }}</text>
+                <view v-if="group.handlerPhone" class="history-node-phone phone-action" @tap.stop="callPhone(group.handlerPhone)">
+                  <wd-icon name="mobile" size="14px" color="#05f" />
+                </view>
                 <text v-if="group.remark" class="history-node-result">（{{ group.remark }}）</text>
               </view>
               <view v-for="item in group.solutionResults" :key="item.key" class="field-block mt-3">
@@ -281,9 +341,13 @@
                   <text>处理结果</text>
                   <text class="solution-result-badge">{{ item.resultText }}</text>
                 </view>
-                <view v-if="item.solutionRemark" class="readonly-text mt-3">
-                  {{ item.solutionRemark }}
-                </view>
+                <wd-textarea
+                  v-if="item.solutionRemark"
+                  :model-value="item.solutionRemark"
+                  readonly
+                  auto-height
+                  custom-class="readonly-textarea mt-3"
+                />
               </view>
               <view v-if="!canRecall && group.files.length" class="field-block mt-3">
                 <view class="field-title">
@@ -293,7 +357,9 @@
                   :file-list="group.files"
                   :limit="9"
                   accept="media"
+                  image-mode="aspectFill"
                   disabled
+                  :before-preview="handleMediaPreview"
                   custom-class="maintenance-media-upload"
                 />
               </view>
@@ -304,103 +370,153 @@
 
       <template v-else>
         <view class="create-form">
-          <view class="field-title">
-            选择项目
-          </view>
-          <person-picker
-            v-model="selectedProjectIds"
-            :candidates="projectCandidates"
-            :multiple="false"
-            label-key="projectName"
-            :detail-keys="['contactName', 'contactPhone']"
-            phone-key="contactPhone"
-            :search-keys="['projectName', 'contactName', 'contactPhone']"
-            title="选择项目"
-            placeholder="请选择项目"
-            empty-text="暂无可选项目"
-            search-placeholder="搜索项目、联系人或手机"
-            large-search
-            checked-color="#05F"
-            checkbox-size="large"
-            search-prefix-width="25%"
-            @phone-click="callPhone"
-          >
-            <template #search-prefix>
-              <view v-if="projectYearOptions.length" class="project-year-filter">
-                <picker mode="selector" :range="projectYearOptions" :value="projectYearIndex" @change="selectProjectYear">
-                  <view class="project-year-picker-value">
-                    <text>{{ selectedProjectYear }}</text>
-                    <wd-icon name="arrow-down" size="14px" color="#667085" />
-                  </view>
-                </picker>
+          <wd-notice-bar v-if="!isCertified" custom-class="create-certification-notice" text="仅认证通过的用户可以新建, 快去认证吧" prefix="warn-bold" />
+          <wd-card type="rectangle" class="bot-title" style="animation-delay: 0.2s;" custom-class="create-form-card">
+            <template #title>
+              <view class="create-card-title">
+                <wd-icon color="#05f" name="desktop" size="16px" />
+                <text>项目信息</text>
               </view>
             </template>
-          </person-picker>
-          <view v-if="selectedProject" class="form-field-row">
-            <view class="form-field-column">
-              <view class="field-title">
-                联系人
+            <view class="create-card-content">
+              <person-picker
+                v-model="selectedProjectIds"
+                :candidates="projectCandidates"
+                :multiple="false"
+                label-key="projectName"
+                :detail-keys="['contactName', 'contactPhone']"
+                phone-key="contactPhone"
+                :search-keys="['projectName', 'contactName', 'contactPhone']"
+                title="选择项目"
+                placeholder="请选择项目"
+                empty-text="暂无可选项目"
+                search-placeholder="搜索项目、联系人或手机"
+                large-search
+                checked-color="#05F"
+                checkbox-size="large"
+                search-prefix-width="25%"
+                @open="vibrateLight"
+                @select="vibrateLight"
+                @phone-click="callPhone"
+              >
+                <template #search-prefix>
+                  <view v-if="projectYearOptions.length" class="project-year-filter">
+                    <picker mode="selector" :range="projectYearOptions" :value="projectYearIndex" @change="selectProjectYear">
+                      <view class="project-year-picker-value">
+                        <text>{{ selectedProjectYear }}</text>
+                        <wd-icon name="down" size="14px" color="#667085" />
+                      </view>
+                    </picker>
+                  </view>
+                </template>
+              </person-picker>
+              <view v-if="selectedProject" class="customer-fieldset">
+                <text class="customer-fieldset-legend">客户方</text>
+                <view class="form-field-row">
+                  <view class="form-field-column">
+                    <view class="field-title">
+                      联系人
+                    </view>
+                    <wd-input v-model="createForm.contactName" no-border custom-class="compact-input" placeholder="请输入" clearable />
+                  </view>
+                  <view class="form-field-column">
+                    <view class="field-title">
+                      联系电话
+                    </view>
+                    <wd-input v-model="createForm.contactPhone" no-border custom-class="compact-input" placeholder="请输入" clearable />
+                  </view>
+                </view>
               </view>
-              <wd-input v-model="createForm.contactName" no-border custom-class="compact-input" placeholder="请输入" clearable />
             </view>
-            <view class="form-field-column">
-              <view class="field-title">
-                联系电话
+          </wd-card>
+
+          <wd-card type="rectangle" class="bot-title" style="animation-delay: 0.3s;" custom-class="create-form-card">
+            <template #title>
+              <view class="create-card-title">
+                <wd-icon color="#05f" name="edit" size="16px" />
+                <text>故障描述</text>
               </view>
-              <wd-input v-model="createForm.contactPhone" no-border custom-class="compact-input" placeholder="请输入" clearable />
+            </template>
+            <view class="create-card-content">
+              <wd-textarea
+                v-model="createForm.faultDescription"
+                custom-textarea-class="compact-textarea"
+                :maxlength="1000"
+                show-word-limit
+                clearable
+                placeholder="请输入故障描述"
+                placeholder-style="color: #bfbfbf;"
+              />
             </view>
+          </wd-card>
+
+          <wd-card type="rectangle" class="bot-title" style="animation-delay: 0.4s;" custom-class="create-form-card">
+            <template #title>
+              <view class="create-card-title">
+                <wd-icon color="#05f" name="exclamation-circle" size="16px" />
+                <text>紧急程度</text>
+              </view>
+            </template>
+            <view class="create-card-content">
+              <wd-radio-group v-model="createForm.urgency" class="urgency-options maintenance-radio-options" style="--wot-radio-horizontal-margin: 0 20px 0 0;" direction="horizontal" type="button">
+                <wd-radio value="一般">
+                  一般
+                </wd-radio>
+                <wd-radio value="重要">
+                  重要
+                </wd-radio>
+                <wd-radio value="紧急">
+                  紧急
+                </wd-radio>
+              </wd-radio-group>
+            </view>
+          </wd-card>
+
+          <wd-card type="rectangle" class="bot-title" style="animation-delay: 0.5s;" custom-class="create-form-card">
+            <template #title>
+              <view class="create-card-title">
+                <wd-icon color="#05f" name="image" size="16px" />
+                <text>照片/视频</text>
+              </view>
+            </template>
+            <view class="create-card-content">
+              <wd-upload
+                v-model:file-list="fileList"
+                :limit="9"
+                :multiple="true"
+                accept="media"
+                image-mode="aspectFill"
+                :reupload="false"
+                :upload-method="customUpload"
+                :before-preview="handleMediaPreview"
+                :show-limit-num="false"
+                loading-color="#5252ff"
+                custom-class="maintenance-media-upload"
+                custom-evoke-class="maintenance-media-upload-evoke"
+                @before-upload="beforeUpload"
+                @remove="deletePic"
+                @change="handleChange"
+              />
+            </view>
+          </wd-card>
+
+          <wd-card type="rectangle" class="bot-title" style="animation-delay: 0.6s;" custom-class="create-form-card">
+            <template #title>
+              <view class="create-card-title">
+                <wd-icon color="#05f" name="user" size="16px" />
+                <text>下一节点处理人</text>
+              </view>
+            </template>
+            <view class="create-card-content">
+              <person-picker v-model="selectedNextCandidateIds" :candidates="createNextCandidates" :multiple="false" placeholder="请选择下一节点处理人" @open="vibrateLight" @select="vibrateLight" @phone-click="callPhone" />
+            </view>
+          </wd-card>
+
+          <view class="create-submit-wrapper">
+            <wd-button block type="primary" custom-class="flow-submit-button create-submit-button" :loading="submitting" :disabled="submitting" @click="debouncedCreateWorkOrder">
+              提交维保单
+            </wd-button>
           </view>
-          <view class="field-title mt-3">
-            故障描述
-          </view>
-          <wd-textarea
-            v-model="createForm.faultDescription"
-            custom-textarea-class="compact-textarea"
-            style="background: #fff; border-radius: 8px;"
-            :maxlength="1000"
-            show-word-limit
-            clearable
-            placeholder="请输入故障描述"
-            placeholder-style="color: #bfbfbf;"
-          />
-          <view class="field-title mt-3">
-            紧急程度
-          </view>
-          <wd-radio-group v-model="createForm.urgency" class="urgency-options" inline shape="dot">
-            <wd-radio value="一般">
-              一般
-            </wd-radio>
-            <wd-radio value="重要">
-              重要
-            </wd-radio>
-            <wd-radio value="紧急">
-              紧急
-            </wd-radio>
-          </wd-radio-group>
-          <view class="field-title mt-3">
-            照片/视频
-          </view>
-          <wd-upload
-            v-model:file-list="fileList"
-            :limit="9"
-            accept="media"
-            :reupload="false"
-            :upload-method="customUpload"
-            :show-limit-num="false"
-            loading-color="#5252ff"
-            custom-class="maintenance-media-upload"
-            custom-evoke-class="maintenance-media-upload-evoke"
-            @before-upload="beforeUpload"
-            @remove="deletePic"
-            @change="handleChange"
-          />
-          <view class="field-title mt-3">
-            下一节点处理人
-          </view>
-          <person-picker v-model="selectedNextCandidateIds" :candidates="nextCandidates" :multiple="false" placeholder="请选择下一节点处理人" @phone-click="callPhone" />
-          <wd-button block type="primary" custom-class="flow-submit-button" :loading="submitting" @click="createWorkOrder">
-            提交维保单
-          </wd-button>
         </view>
       </template>
     </view>
@@ -411,20 +527,25 @@
 </template>
 
 <script setup>
+import { useToast } from '@wot-ui/ui'
 import { computed, inject, nextTick, reactive, ref, watch } from 'vue'
-import { useToast } from 'wot-design-uni'
 import { simpleLoginApi } from '@/api/login/simple-login-api.js'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
 import PersonPicker from '@/components/person-picker.vue'
 import { useUserStore } from '@/store/user'
+import { debounce } from '@/utils/debounce'
+import { requestWorkOrderSubscribe } from '@/utils/subscribe-message'
 import FlowStatusPopup from './components/flow-status-popup.vue'
 import WorkOrderShare from './components/work-order-share.vue'
 
 const navBarConfig = inject('navBarConfig')
 const apiUrl = import.meta.env.VITE_SERVER_BASEURL
 const openId = useUserStore().openId
+const MAINTENANCE_CATEGORY_OPTIONS = ['硬件', '软件', '装饰', '道具', '模型', '平面']
+const maintenancePreferences = reactive(loadMaintenancePreferences())
 const toast = useToast()
+const vibrateLight = () => wx.vibrateShort({ type: 'light' })
 const loading = ref(true)
 const submitting = ref(false)
 const instanceId = ref('')
@@ -439,6 +560,8 @@ const selectedNextCandidateId = ref(null)
 const ownerCandidates = ref([])
 const selectedOwnerTargetId = ref(null)
 const ownerFlowMode = ref('NEXT_NODE')
+const onsiteTransferEnabled = ref(false)
+const selectedOnsiteTransferUserId = ref(null)
 const onsiteCode = ref('')
 const onsiteCodeVerified = ref(false)
 const onsiteCodeVerificationFailed = ref(false)
@@ -446,6 +569,7 @@ const scanning = ref(false)
 const flowStatusVisible = ref(false)
 const stampLoaded = ref(false)
 const initialized = ref(false)
+const actionHandlerPhones = ref({})
 const location = reactive({ longitude: null, latitude: null, address: '', addressError: '' })
 const runtime = reactive({ instance: null, nodes: [], actionLogs: [], form: {} })
 const createForm = reactive({
@@ -455,14 +579,21 @@ const createForm = reactive({
   faultDescription: '',
   urgency: '一般',
 })
-const actionForm = reactive({ solutionResult: null, solutionRemark: '', maintenanceCategory: '硬件' })
+const actionForm = reactive({ solutionResult: 1, solutionRemark: '', maintenanceCategory: '硬件', serviceMode: 'ONSITE' })
 const currentUserId = ref(null)
+const isCertified = ref(false)
+const scannedProjectScene = ref('')
+let projectGroupsPromise
 
 const isDetail = computed(() => !!instanceId.value)
 const detailForm = computed(() => runtime.form || {})
 const form = computed(() => detailForm.value.form || {})
+const projectNameCharacters = computed(() => (form.value.projectName || '-').split(''))
+const isRemoteService = computed(() => form.value.serviceMode === 'REMOTE')
 const files = computed(() => detailForm.value.files || [])
 const onsitePersons = computed(() => detailForm.value.onsitePersons || [])
+const onsiteTransferCandidates = computed(() => (detailForm.value.onsiteCandidates || [])
+  .filter(item => Number(item.id) !== Number(currentUserId.value)))
 const solutionResults = computed(() => detailForm.value.solutionResults || [])
 const isArchived = computed(() => runtime.instance?.status === 'ARCHIVED')
 const archivedSolutionStamp = computed(() => {
@@ -516,6 +647,7 @@ const actionHistoryGroups = computed(() => {
       label: log.nodeName || node?.nodeName || log.nodeType || '流程节点',
       actionType: log.actionType,
       handlerUserName: log.handlerUserName,
+      handlerPhone: actionHandlerPhones.value[String(log.handlerUserId)] || '',
       createTime: log.createTime,
       roundNo: log.roundNo,
       remark: log.remark,
@@ -551,10 +683,13 @@ const lastFinishPhotos = computed(() => lastFinishGroup.value
   .filter(Boolean) || [])
 const currentNode = computed(() => (runtime.nodes || []).find(item => item.current))
 const currentNodeCode = computed(() => currentNode.value?.nodeType || currentNode.value?.nodeCode || '')
+const isArchiveNode = computed(() => ['ONSITE_FINISH', 'ARCHIVE'].includes(currentNodeCode.value))
+const isOnsiteTransferMode = computed(() => currentNodeCode.value === 'ONSITE_ARRIVE' && onsiteTransferEnabled.value)
 const attachmentLabel = computed(() => currentNodeCode.value === 'ONSITE_ARRIVE'
   ? '照片/视频(维保前)'
   : '照片/视频')
-const canEdit = computed(() => runtime.instance?.status === 'RUNNING' && Number(runtime.instance?.currentHandlerUserId) === Number(currentUserId.value))
+const canEdit = computed(() => runtime.instance?.status === 'RUNNING'
+  && Number(runtime.instance?.currentHandlerUserId) === Number(currentUserId.value))
 const creatorUserId = computed(() => {
   return (runtime.actionLogs || []).find(item => item.actionType === 'START')?.handlerUserId
 })
@@ -568,26 +703,133 @@ const selectedProjectIds = computed({
   get: () => selectedProject.value?.id == null ? [] : [String(selectedProject.value.id)],
   set: (value) => {
     selectedProject.value = projects.value.find(item => String(item.id) === String(value[0])) || null
+    if (selectedProject.value)
+      rememberRecentSelection('recentProjectIds', selectedProject.value.id)
     resetCreateContact()
   },
 })
-const projectYearOptions = computed(() => projectYearGroups.value.map(group => group.projectYear == null ? '未设置年份' : String(group.projectYear)))
+const projectYearOptions = computed(() => {
+  const years = projectYearGroups.value.map(group => group.projectYear == null ? '未设置年份' : String(group.projectYear))
+  return years.length ? ['全部', ...years] : years
+})
 const projectYearIndex = computed(() => Math.max(projectYearOptions.value.indexOf(selectedProjectYear.value), 0))
-const projectCandidates = computed(() => projectYearGroups.value
-  .find(group => String(group.projectYear ?? '未设置年份') === selectedProjectYear.value)
-  ?.projects || [])
+const projectCandidates = computed(() => {
+  const candidates = selectedProjectYear.value === '全部'
+    ? projects.value
+    : projectYearGroups.value
+      .find(group => String(group.projectYear ?? '未设置年份') === selectedProjectYear.value)
+      ?.projects || []
+  return sortByRecentSelection(candidates, maintenancePreferences.recentProjectIds)
+})
+const createNextCandidates = computed(() => sortByRecentSelection(nextCandidates.value, maintenancePreferences.recentNextHandlerIds))
 const selectedNextCandidateIds = computed({
   get: () => selectedNextCandidateId.value == null ? [] : [String(selectedNextCandidateId.value)],
-  set: (value) => { selectedNextCandidateId.value = value[0] ?? null },
+  set: (value) => {
+    selectedNextCandidateId.value = value[0] ?? null
+    if (!isDetail.value && selectedNextCandidateId.value != null)
+      rememberRecentSelection('recentNextHandlerIds', selectedNextCandidateId.value)
+  },
 })
 const selectedOwnerTargetIds = computed({
   get: () => selectedOwnerTargetId.value == null ? [] : [String(selectedOwnerTargetId.value)],
   set: (value) => { selectedOwnerTargetId.value = value[0] ?? null },
 })
-const previousOwnerUserId = computed(() => {
-  const logs = (runtime.actionLogs || []).filter(item => (item.nodeCode || item.nodeType) === 'OWNER_ASSIGN' && item.handlerUserId != null)
-  return logs.length ? logs[logs.length - 1].handlerUserId : null
+const selectedOnsiteTransferUserIds = computed({
+  get: () => selectedOnsiteTransferUserId.value == null ? [] : [String(selectedOnsiteTransferUserId.value)],
+  set: (value) => { selectedOnsiteTransferUserId.value = value[0] ?? null },
 })
+const previousOwnerUserId = computed(() => (runtime.actionLogs || [])
+  .filter(item => (item.nodeCode || item.nodeType) === 'OWNER_ASSIGN' && item.handlerUserId != null)
+  .at(-1)
+  ?.handlerUserId ?? null)
+
+function createDefaultMaintenancePreferences() {
+  return {
+    recentProjectIds: [],
+    recentNextHandlerIds: [],
+    maintenanceCategory: '',
+  }
+}
+
+function normalizePreferenceIds(value) {
+  if (!Array.isArray(value))
+    return []
+  return [...new Set(value
+    .map(item => String(item ?? '').trim())
+    .filter(Boolean))]
+}
+
+function maintenancePreferencesStorageKey() {
+  return openId ? `maintenance-preferences:${openId}` : ''
+}
+
+function loadMaintenancePreferences() {
+  const defaults = createDefaultMaintenancePreferences()
+  const storageKey = maintenancePreferencesStorageKey()
+  if (!storageKey)
+    return defaults
+  try {
+    const stored = uni.getStorageSync(storageKey)
+    if (!stored || typeof stored !== 'object')
+      return defaults
+    return {
+      recentProjectIds: normalizePreferenceIds(stored.recentProjectIds),
+      recentNextHandlerIds: normalizePreferenceIds(stored.recentNextHandlerIds),
+      maintenanceCategory: MAINTENANCE_CATEGORY_OPTIONS.includes(stored.maintenanceCategory)
+        ? stored.maintenanceCategory
+        : '',
+    }
+  }
+  catch {
+    return defaults
+  }
+}
+
+function saveMaintenancePreferences() {
+  const storageKey = maintenancePreferencesStorageKey()
+  if (!storageKey)
+    return
+  try {
+    uni.setStorageSync(storageKey, {
+      recentProjectIds: [...maintenancePreferences.recentProjectIds],
+      recentNextHandlerIds: [...maintenancePreferences.recentNextHandlerIds],
+      maintenanceCategory: maintenancePreferences.maintenanceCategory,
+    })
+  }
+  catch {}
+}
+
+function rememberRecentSelection(key, value) {
+  const id = String(value ?? '').trim()
+  if (!id)
+    return
+  maintenancePreferences[key] = [id, ...maintenancePreferences[key].filter(item => item !== id)]
+  saveMaintenancePreferences()
+}
+
+function sortByRecentSelection(items, recentIds) {
+  const recentIndex = new Map(recentIds.map((id, index) => [String(id), index]))
+  return (items || [])
+    .map((item, index) => ({
+      item,
+      index,
+      recentIndex: recentIndex.get(String(item?.id ?? item?.userId ?? '')),
+    }))
+    .sort((left, right) => {
+      const leftRecentIndex = left.recentIndex ?? Number.MAX_SAFE_INTEGER
+      const rightRecentIndex = right.recentIndex ?? Number.MAX_SAFE_INTEGER
+      return leftRecentIndex - rightRecentIndex || left.index - right.index
+    })
+    .map(entry => entry.item)
+}
+
+function rememberMaintenanceCategory(event) {
+  const category = event?.value
+  if (!MAINTENANCE_CATEGORY_OPTIONS.includes(category))
+    return
+  maintenancePreferences.maintenanceCategory = category
+  saveMaintenancePreferences()
+}
 
 definePage({
   style: {
@@ -600,16 +842,50 @@ definePage({
 async function getCurrentUser() {
   const info = await simpleLoginApi.getEmployeeInfo({ openId })
   currentUserId.value = info?.id
+  isCertified.value = Number(info?.type) === 2
   return info
 }
 
 async function initCreate() {
-  const [projectGroups, nodes] = await Promise.all([othersApi.projectListGroupByYear(), othersApi.workflowNodeList()])
+  const projectGroups = await preloadProjectGroups()
   projectYearGroups.value = projectGroups || []
   projects.value = projectYearGroups.value.flatMap(group => group.projects || [])
   selectedProjectYear.value = projectYearOptions.value[0] || ''
-  const ownerAssignNode = (nodes || []).find(item => item.nodeCode === 'OWNER_ASSIGN' || item.nodeType === 'OWNER_ASSIGN')
-  nextCandidates.value = ownerAssignNode?.id ? await othersApi.workflowNodeCandidates(ownerAssignNode.id) || [] : []
+  await selectScannedProject()
+  loadNextCandidates()
+}
+
+async function loadNextCandidates() {
+  try {
+    const nodes = await othersApi.workflowNodeList()
+    const ownerAssignNode = (nodes || []).find(item => item.nodeCode === 'OWNER_ASSIGN' || item.nodeType === 'OWNER_ASSIGN')
+    nextCandidates.value = ownerAssignNode?.id ? await othersApi.workflowNodeCandidates(ownerAssignNode.id) || [] : []
+  }
+  catch (error) {
+    console.error('[维保单] 下一节点处理人加载失败', error)
+  }
+}
+
+function preloadProjectGroups() {
+  projectGroupsPromise ||= othersApi.projectListGroupByYear()
+  return projectGroupsPromise
+}
+
+async function selectScannedProject() {
+  if (!isCertified.value || !scannedProjectScene.value)
+    return
+  try {
+    const projectId = await othersApi.resolveProjectMiniappCode(scannedProjectScene.value)
+    const project = projects.value.find(item => String(item.id) === String(projectId))
+    if (!project)
+      throw new Error('项目不存在或已不在维保期内')
+    selectedProjectYear.value = project.projectYear == null ? '未设置年份' : String(project.projectYear)
+    await nextTick()
+    selectedProjectIds.value = [String(project.id)]
+  }
+  catch (error) {
+    uni.showToast({ title: error?.message || '项目码解析失败', icon: 'none' })
+  }
 }
 
 watch(selectedProjectYear, () => {
@@ -632,6 +908,8 @@ function resetActionState() {
   actionFileList.value = []
   selectedOwnerTargetId.value = null
   ownerFlowMode.value = 'NEXT_NODE'
+  onsiteTransferEnabled.value = false
+  selectedOnsiteTransferUserId.value = null
   onsiteCode.value = ''
   onsiteCodeVerified.value = false
   onsiteCodeVerificationFailed.value = false
@@ -639,20 +917,22 @@ function resetActionState() {
   location.latitude = null
   location.address = ''
   location.addressError = ''
-  actionForm.solutionResult = null
+  actionForm.solutionResult = 1
   actionForm.solutionRemark = ''
-  actionForm.maintenanceCategory = '硬件'
+  actionForm.maintenanceCategory = maintenancePreferences.maintenanceCategory || '硬件'
+  actionForm.serviceMode = 'ONSITE'
 }
 
 async function initDetail() {
   stampLoaded.value = false
   const result = await othersApi.workflowInstanceRuntime(instanceId.value)
   Object.assign(runtime, result || {})
+  await loadActionHandlerPhones()
   await nextTick()
   if (archivedSolutionStamp.value)
     setTimeout(() => { stampLoaded.value = true }, 200)
   actionFileList.value = []
-  fileList.value = files.value.map(item => ({ id: item.fileId, url: item.src, status: 'success' }))
+  fileList.value = normalizeFiles(files.value)
   onsiteCode.value = detailForm.value.form?.onsiteMaintenanceCode || ''
   onsiteCodeVerified.value = false
   onsiteCodeVerificationFailed.value = false
@@ -660,9 +940,10 @@ async function initDetail() {
   location.latitude = detailForm.value.form?.latitude ?? null
   location.address = detailForm.value.form?.address || ''
   location.addressError = ''
-  actionForm.solutionResult = null
+  actionForm.solutionResult = 1
   actionForm.solutionRemark = ''
-  actionForm.maintenanceCategory = detailForm.value.form?.maintenanceCategory || '硬件'
+  actionForm.maintenanceCategory = detailForm.value.form?.maintenanceCategory || maintenancePreferences.maintenanceCategory || '硬件'
+  actionForm.serviceMode = detailForm.value.form?.serviceMode || 'ONSITE'
   const current = currentNode.value
   if (current?.nodeId) {
     if (currentNodeCode.value === 'CREATE' || currentNodeCode.value === 'OWNER_ASSIGN') {
@@ -676,6 +957,23 @@ async function initDetail() {
       ownerCandidates.value = await othersApi.workflowNodeCandidates(current.nodeId) || []
     }
   }
+}
+
+async function loadActionHandlerPhones() {
+  actionHandlerPhones.value = {}
+  const handlerUserIds = [...new Set((runtime.actionLogs || [])
+    .map(item => item.handlerUserId)
+    .filter(userId => userId != null))]
+  const phoneEntries = await Promise.all(handlerUserIds.map(async (userId) => {
+    try {
+      const phoneNumber = (await othersApi.userInfoById(userId))?.phoneNumber || ''
+      return [String(userId), phoneNumber]
+    }
+    catch {
+      return [String(userId), '']
+    }
+  }))
+  actionHandlerPhones.value = Object.fromEntries(phoneEntries)
 }
 
 async function init() {
@@ -702,8 +1000,10 @@ function openFlowStatus() {
 }
 
 function callPhone(phoneNumber) {
-  if (phoneNumber)
+  if (phoneNumber) {
+    uni.vibrateShort()
     uni.makePhoneCall({ phoneNumber: String(phoneNumber) })
+  }
 }
 
 function handleBack() {
@@ -725,6 +1025,9 @@ function formatSolutionResult(value) {
 async function createWorkOrder() {
   if (submitting.value)
     return
+  wx.vibrateShort({ type: 'light' })
+  if (!isCertified.value)
+    return toast.error({ msg: '仅认证通过的用户可以新建维保单' })
   if (!selectedProject.value)
     return toast.error({ msg: '请选择项目' })
   if (!createForm.contactName.trim())
@@ -736,7 +1039,10 @@ async function createWorkOrder() {
   if (!selectedNextCandidateId.value)
     return toast.error({ msg: '请选择下一节点处理人' })
   submitting.value = true
+  let submitted = false
   try {
+    if (!await requestWorkOrderSubscribe())
+      return
     const result = await othersApi.workflowInstanceStart({
       bizType: 'WORK_ORDER',
       bizId: '30001',
@@ -761,26 +1067,30 @@ async function createWorkOrder() {
       actionType: 'SUBMIT',
       remark: '创建后提交负责人',
     })
+    submitted = true
     toast.success({ msg: '提交成功' })
-    setTimeout(() => uni.redirectTo({ url: `/pages-sub/maintenance/maintenance?instanceId=${result.instanceId}` }), 500)
+    setTimeout(() => uni.redirectTo({ url: '/pages-sub/maintenance/list' }), 500)
   }
   catch (error) {
     toast.error({ msg: error?.message || '提交失败' })
   }
   finally {
-    submitting.value = false
+    if (!submitted)
+      submitting.value = false
   }
 }
 
 function buildActionForm() {
   const payload = {}
-  if (currentNodeCode.value !== 'OWNER_ASSIGN')
+  if (currentNodeCode.value !== 'OWNER_ASSIGN' && currentNodeCode.value !== 'ARCHIVE')
     payload.fileCodes = actionUploadedCodes()
   if (currentNodeCode.value === 'OWNER_ASSIGN' && ownerFlowMode.value === 'NEXT_NODE')
     payload.onsitePersons = [{ userId: selectedNextCandidateId.value }]
-  if (currentNodeCode.value === 'OWNER_ASSIGN')
+  if (currentNodeCode.value === 'OWNER_ASSIGN') {
     payload.maintenanceCategory = actionForm.maintenanceCategory
-  if (currentNodeCode.value === 'ONSITE_ARRIVE') {
+    payload.serviceMode = actionForm.serviceMode
+  }
+  if (currentNodeCode.value === 'ONSITE_ARRIVE' && !isRemoteService.value) {
     payload.onsiteMaintenanceCode = onsiteCode.value
     payload.longitude = location.longitude
     payload.latitude = location.latitude
@@ -798,7 +1108,10 @@ function buildActionForm() {
 async function submitAction(actionType) {
   if (submitting.value)
     return
-  if (currentNodeCode.value !== 'OWNER_ASSIGN' && !actionUploadedCodes().length)
+  wx.vibrateShort({ type: 'light' })
+  if (actionType === 'TRANSFER' && !selectedOnsiteTransferUserId.value)
+    return toast.error({ msg: '请选择重新指定的处理人' })
+  if (actionType !== 'TRANSFER' && currentNodeCode.value !== 'OWNER_ASSIGN' && currentNodeCode.value !== 'ARCHIVE' && !actionUploadedCodes().length)
     return toast.error({ msg: '请上传图片或视频' })
   if (currentNodeCode.value === 'CREATE' && !selectedNextCandidateId.value)
     return toast.error({ msg: '请选择下一节点处理人' })
@@ -813,13 +1126,23 @@ async function submitAction(actionType) {
       return toast.error({ msg: '请选择下一节点处理人' })
     }
   }
-  if (currentNodeCode.value === 'ONSITE_ARRIVE') {
-    if (!onsiteCodeVerified.value)
-      return toast.error({ msg: '请先扫描并校验现场维保码' })
-    if (location.longitude == null || location.latitude == null)
-      return toast.error({ msg: '请获取当前位置' })
-    try {
-      const verified = await othersApi.workflowInstanceVerifyOnsiteCode(instanceId.value, onsiteCode.value)
+  if (currentNodeCode.value === 'ONSITE_FINISH' && !actionForm.solutionRemark.trim())
+    return toast.error({ msg: '请填写处理备注' })
+  submitting.value = true
+  let submitted = false
+  try {
+    if (actionType !== 'TRANSFER' && currentNodeCode.value === 'ONSITE_ARRIVE' && !isRemoteService.value) {
+      if (!onsiteCodeVerified.value)
+        return toast.error({ msg: '请先扫描并校验现场维保码' })
+      if (location.longitude == null || location.latitude == null)
+        return toast.error({ msg: '请获取当前位置' })
+      let verified
+      try {
+        verified = await othersApi.workflowInstanceVerifyOnsiteCode(instanceId.value, onsiteCode.value)
+      }
+      catch (error) {
+        return toast.error({ msg: error?.message || '维保码校验失败' })
+      }
       if (!verified) {
         onsiteCode.value = ''
         onsiteCodeVerified.value = false
@@ -827,14 +1150,8 @@ async function submitAction(actionType) {
         return toast.error({ msg: '维保码比对错误' })
       }
     }
-    catch (error) {
-      return toast.error({ msg: error?.message || '维保码校验失败' })
-    }
-  }
-  if (currentNodeCode.value === 'ONSITE_FINISH' && !actionForm.solutionRemark.trim())
-    return toast.error({ msg: '请填写处理备注' })
-  submitting.value = true
-  try {
+    if (!await requestWorkOrderSubscribe())
+      return
     const payload = {
       instanceId: Number(instanceId.value),
       expectedCurrentNodeId: runtime.instance?.currentNodeId,
@@ -842,8 +1159,13 @@ async function submitAction(actionType) {
       expectedCurrentRoundNo: runtime.instance?.currentRoundNo,
       openId,
       actionType,
-      remark: actionType === 'ARCHIVE' ? '归档工单' : '处理',
-      form: buildActionForm(),
+      remark: actionType === 'TRANSFER' ? '重新指定处理人' : actionType === 'ARCHIVE' ? '归档工单' : '处理',
+    }
+    if (actionType === 'TRANSFER') {
+      payload.targetUserId = selectedOnsiteTransferUserId.value
+    }
+    else {
+      payload.form = buildActionForm()
     }
     if (actionType === 'RETURN') {
       payload.targetUserId = previousOwnerUserId.value
@@ -858,8 +1180,9 @@ async function submitAction(actionType) {
         payload.nextTargetUserId = selectedNextCandidateId.value
     }
     await othersApi.workflowInstanceSubmit(payload)
+    submitted = true
     toast.success({ msg: '提交成功' })
-    await initDetail()
+    setTimeout(() => uni.redirectTo({ url: '/pages-sub/maintenance/list' }), 500)
   }
   catch (error) {
     if (currentNodeCode.value === 'ONSITE_ARRIVE' && error?.message?.includes('维保码比对错误')) {
@@ -871,16 +1194,27 @@ async function submitAction(actionType) {
       await initDetail()
   }
   finally {
-    submitting.value = false
+    if (!submitted)
+      submitting.value = false
   }
 }
+
+watch(onsiteTransferEnabled, (enabled) => {
+  if (!enabled)
+    selectedOnsiteTransferUserId.value = null
+})
 
 async function recallAndReassign() {
   if (submitting.value)
     return
+  wx.vibrateShort({ type: 'light' })
   if (!canRecall.value)
     return toast.error({ msg: '流程已进入下一节点' })
   submitting.value = true
+  if (!await requestWorkOrderSubscribe()) {
+    submitting.value = false
+    return
+  }
   try {
     await othersApi.workflowInstanceSubmit({
       instanceId: Number(instanceId.value),
@@ -913,11 +1247,48 @@ function actionUploadedCodes() {
 }
 
 function normalizeFiles(items) {
-  return (items || []).map(item => ({
-    id: item.fileId || item.id || item.code,
-    url: item.src || item.url,
-    status: 'success',
-  }))
+  return (items || []).map((item) => {
+    const originalUrl = item.originalUrl || item.src || item.url
+    const isVideo = isVideoFile({ ...item, url: originalUrl })
+    return {
+      id: item.fileId || item.id || item.code,
+      name: item.name || item.originalName || '',
+      type: item.type || '',
+      url: isVideo ? originalUrl : buildMediaThumbnailUrl(originalUrl),
+      originalUrl,
+      thumb: isVideo ? (item.thumb || '') : '',
+      status: 'success',
+    }
+  })
+}
+
+const mediaThumbnailQuery = 'x-oss-process=image/resize,m_fill,w_300,h_300/format,webp'
+
+function buildMediaThumbnailUrl(url) {
+  if (!url || url.startsWith('wxfile://') || url.startsWith('file://'))
+    return url
+  return `${url}${url.includes('?') ? '&' : '?'}${mediaThumbnailQuery}`
+}
+
+function isVideoFile(file) {
+  const type = String(file?.type || '').toLowerCase()
+  const url = String(file?.originalUrl || file?.url || file?.name || '')
+  return type.startsWith('video/') || /\.(?:ogm|webm|ogv|asx|m4v|mp4|mpg|mpeg|dat|asf|avi|rm|rmvb|mov|wmv|flv|mkv|video)(?=$|[?#])/i.test(url)
+}
+
+function handleMediaPreview({ file, fileList }) {
+  if (!file?.originalUrl || isVideoFile(file))
+    return true
+  const imageFiles = (fileList || []).filter(item => !isVideoFile(item))
+  const urls = imageFiles.map(item => item.originalUrl || item.url).filter(Boolean)
+  const current = file.originalUrl
+  if (!urls.length)
+    return true
+  uni.previewImage({
+    urls,
+    current,
+  })
+  return false
 }
 
 function beforeUpload() {
@@ -943,7 +1314,16 @@ async function uploadToList(file, targetList) {
       const result = JSON.parse(await uploadFilePromise(item.url))
       const uploaded = result?.data || result
       const fileInfo = Array.isArray(uploaded) ? uploaded[0] : uploaded
-      targetList.value.push({ ...item, status: 'success', id: fileInfo.code, url: fileInfo.src || item.url })
+      const originalUrl = fileInfo.src || item.url
+      const isVideo = isVideoFile({ ...item, url: originalUrl })
+      targetList.value.push({
+        ...item,
+        status: 'success',
+        id: fileInfo.code,
+        url: isVideo ? originalUrl : buildMediaThumbnailUrl(originalUrl),
+        originalUrl,
+        thumb: isVideo ? (item.thumb || '') : '',
+      })
     }
     catch (error) {
       toast.error({ msg: '文件上传失败' })
@@ -1097,9 +1477,26 @@ async function scanOnsiteCode() {
   }
 }
 
+const debouncedCreateWorkOrder = debounce(createWorkOrder, 500, { edges: ['leading'] })
+const debouncedSubmitAction = debounce(submitAction, 500, { edges: ['leading'] })
+const debouncedRecallAndReassign = debounce(recallAndReassign, 500, { edges: ['leading'] })
+
 onLoad((options) => {
   instanceId.value = options?.instanceId || ''
+  scannedProjectScene.value = getScanScene(options)
+  if (!instanceId.value)
+    preloadProjectGroups()
 })
+
+function getScanScene(options) {
+  const scene = options?.scene || options?.q?.match(/[?&]scene=([^&]+)/)?.[1] || ''
+  try {
+    return decodeURIComponent(scene)
+  }
+  catch {
+    return scene
+  }
+}
 
 onShow(async () => {
   await uni.$onLaunched
@@ -1111,7 +1508,7 @@ onShow(async () => {
 </script>
 
 <style lang="scss" scoped>
-@import './scss/maintenance.scss';
+@use './scss/maintenance.scss';
 
 .onsite-code-verified {
   display: flex;
@@ -1119,6 +1516,21 @@ onShow(async () => {
   gap: 6px;
   color: #37c062;
   font-weight: 600;
+}
+
+.onsite-transfer-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.onsite-transfer-switch .field-title {
+  margin-bottom: 0;
+}
+
+:deep(.create-certification-notice) {
+  margin-bottom: 10px;
 }
 
 .onsite-code-verification-failed {
@@ -1145,10 +1557,11 @@ onShow(async () => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  height: 48px;
+  height: 38px;
   padding: 0 10px;
-  border-radius: 5px;
+  border-radius: 8px;
   box-sizing: border-box;
+  background: #f5f6f8;
   color: #333;
   font-size: 14px;
   white-space: nowrap;
@@ -1159,23 +1572,16 @@ onShow(async () => {
 }
 
 :deep(.urgency-options) {
+  --wot-radio-button-margin: 0 20px 0 0;
+
   background: transparent !important;
 }
 
-:deep(.urgency-options .wd-radio) {
-  margin-right: 24px;
-}
+:deep(.readonly-textarea) {
+  --wot-textarea-bg: #fff6eb;
+  --wot-textarea-padding: 12px 16px;
 
-:deep(.urgency-options .wd-radio:last-child) {
-  margin-right: 0;
-}
-
-:deep(.maintenance-category-options) {
-  gap: 10px;
-}
-
-:deep(.maintenance-category-options .wd-radio) {
-  margin-right: 0 !important;
+  border-radius: 8px;
 }
 
 .recall-button {
@@ -1205,8 +1611,9 @@ page {
 }
 
 .wd-textarea__count {
-  width: 60px;
-  justify-content: flex-end;
+  width: 100%;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .page-container .wd-input,
@@ -1255,6 +1662,10 @@ page {
   border-radius: inherit;
 }
 
+.maintenance-media-upload .wd-upload__video video {
+  object-fit: cover;
+}
+
 .compact-textarea {
   height: 72px;
 }
@@ -1268,7 +1679,7 @@ page {
 :deep(.compact-input) {
   padding: 12px 15px;
   border-radius: 8px;
-  background: #fff;
+  background: #f5f6f8;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.025);
 }
 
@@ -1282,6 +1693,11 @@ page {
 .action-card .maintenance-media-upload .wd-upload__preview .wd-upload__status-content,
 .action-card .maintenance-media-upload .wd-upload__evoke {
   background: #f6f6f7 !important;
+}
+
+.create-form .maintenance-media-upload-evoke {
+  background: #f7f8fa !important;
+  border: 0 !important;
 }
 
 .history-card .maintenance-media-upload .wd-upload__preview,

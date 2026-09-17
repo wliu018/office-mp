@@ -104,8 +104,10 @@
     "@dcloudio/uni-mp-xhs": "3.0.0-4070620250821001",
     "@dcloudio/uni-quickapp-webview": "3.0.0-4070620250821001",
     "@leafer-ui/miniapp": "^2.2.0",
+    "@wot-ui/ui": "^2.3.2",
     "abortcontroller-polyfill": "^1.7.8",
     "alova": "^3.5.0",
+    "animate.css": "4.1.1",
     "dayjs": "1.11.10",
     "lodash": "^4.17.23",
     "pinia": "2.0.36",
@@ -113,7 +115,6 @@
     "vue": "^3.5.27",
     "vue-i18n": "9.1.9",
     "vue-router": "4.5.1",
-    "wot-design-uni": "latest",
     "z-paging": "2.8.7"
   },
   "devDependencies": {
@@ -158,7 +159,7 @@
     "postcss-html": "^1.8.1",
     "postcss-scss": "^4.0.9",
     "rollup-plugin-visualizer": "^6.0.5",
-    "sass": "1.77.8",
+    "sass": "^1.98.0",
     "std-env": "^3.10.0",
     "typescript": "~5.8.3",
     "unocss": "66.0.0",

@@ -78,10 +78,12 @@ async function handleResponse(config, response, resolve, reject) {
       break
     default:
       // 服务器异常
-      uni.showToast({
-        title: '服务器开小差了~',
-        icon: 'none',
-      })
+      if (config.showError !== false) {
+        uni.showToast({
+          title: '服务器开小差了~',
+          icon: 'none',
+        })
+      }
       reject(response)
       break
   }
@@ -92,9 +94,9 @@ async function handleResponse(config, response, resolve, reject) {
  */
 export function request(config) {
   return new Promise((resolve, reject) => {
-    const contentType = config.method !== 'POST'
+    const contentType = config.contentType || (config.method !== 'POST'
       ? 'application/x-www-form-urlencoded'
-      : 'application/json'
+      : 'application/json')
     uni.request({
       url: baseUrl + config.url,
       data: withOpenId(config.data),
@@ -148,6 +150,7 @@ export function putRequest(url, data, config = {}) {
     url,
     data,
     method: 'PUT',
+    contentType: 'application/json',
   })
 }
 

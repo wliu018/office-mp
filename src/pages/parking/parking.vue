@@ -2,7 +2,7 @@
   <div style="height: 0;">
     <wd-navbar
       placeholder left-arrow safe-area-inset-top fixed title="停车优惠卷"
-      style="--wot-navbar-background:transparent;--wot-color-border-light:transparent"
+      style="--wot-navbar-bg: transparent"
       @click-left="uni.navigateBack()"
     />
   </div>
@@ -100,7 +100,7 @@
         </view>
         <div class="mt-[50px] text-center">
           <view v-if="state.licensePlates.length > 1" class="mb-[20px]">
-            <wd-radio-group v-model="currentLicensePlate" style="background: transparent;" inline shape="dot" size="large" @change="changeLicensePlate">
+            <wd-radio-group v-model="currentLicensePlate" style="background: transparent;" direction="horizontal" type="dot" size="large" @change="changeLicensePlate">
               <div class="flex flex-row justify-center space-x-1" style="--wot-radio-label-color: #303032;">
                 <wd-radio v-for="item in state.licensePlates" :key="item.code" :value="item.code">
                   {{ item.code }}
@@ -109,6 +109,7 @@
             </wd-radio-group>
           </view>
           <wd-button
+            round
             :disabled="!is_certified && state.availableCoupons.length > 0 && !!licensePlate"
             custom-class="custom-shadow"
             custom-style="background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%);"
@@ -140,9 +141,9 @@
 </template>
 
 <script setup>
+import { useDialog, useToast } from '@wot-ui/ui'
 import dayjs from 'dayjs'
-import { inject, nextTick, onMounted, reactive, ref } from 'vue'
-import { useMessage, useToast } from 'wot-design-uni'
+import { inject, onMounted, reactive, ref } from 'vue'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
 import { useUserStore } from '@/store/user'
@@ -152,7 +153,7 @@ const navBarConfig = inject('navBarConfig')
 
 const openId = useUserStore().openId
 const toast = useToast()
-const message = useMessage()
+const dialog = useDialog()
 const globalLoadingShow = ref(false)
 const wdLoading = ref(true)
 const is_certified = ref(false)
@@ -233,11 +234,11 @@ function getTicket() {
 }
 async function takeTicket() {
   if (!is_certified.value) {
-    message.alert({ msg: '请先进行认证' })
+    dialog.alert({ msg: '请先进行认证' })
     return
   }
   if (!currentLicensePlate?.value) {
-    message.alert({ msg: '请添加车牌号' })
+    dialog.alert({ msg: '请添加车牌号' })
     return
   }
   toast.loading({
@@ -272,7 +273,7 @@ async function takeTicket() {
 </script>
 
 <style lang="scss" scoped>
-@import './scss/parking.scss';
+@use './scss/parking.scss';
 </style>
 
 <style>

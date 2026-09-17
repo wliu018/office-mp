@@ -70,7 +70,7 @@ page {
   -webkit-overflow-scrolling: touch;
   height: 100%;
   width: 100%;
-  font-family: qingke, 'PingFang SC', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  font-family: 'DINPro-Bold', qingke, 'PingFang SC', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
   word-break: break-all;
   white-space: normal;
   color: #000;
@@ -118,8 +118,8 @@ page {
     transform: translateZ(0);
   }
 }
-.wd-message-custom-class {
-  --wot-button-info-bg-color: #e8f3ff;
-  --wot-button-primary-bg-color: linear-gradient(115deg, #3d7dfe 8.4%, #6a59fe 52.29%, #9142ff 93.72%);
+.wd-dialog-custom-class {
+  --wot-button-info-bg: #e8f3ff;
+  --wot-button-primary-bg: linear-gradient(115deg, #3d7dfe 8.4%, #6a59fe 52.29%, #9142ff 93.72%);
 }
 </style>

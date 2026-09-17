@@ -2,7 +2,7 @@
   <div style="height: 0;">
     <wd-navbar
       placeholder left-arrow safe-area-inset-top fixed title="预定列表"
-      style="--wot-navbar-background:transparent;--wot-color-border-light:transparent"
+      style="--wot-navbar-bg: transparent"
       @click-left="uni.navigateBack()"
     />
   </div>
@@ -38,7 +38,7 @@
               </div>
             </div>
           </template>
-          <wd-status-tip v-else image="content" tip="暂无内容" />
+          <wd-empty v-else icon="no-content" tip="暂无内容" />
         </div>
         <!-- 加载状态提示 -->
         <wd-loadmore
@@ -56,9 +56,8 @@
 </template>
 
 <script setup>
-import dayjs from 'dayjs'
+import { useToast } from '@wot-ui/ui'
 import { inject, onMounted, ref } from 'vue'
-import { useToast } from 'wot-design-uni'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
 import { useUserStore } from '@/store/user'
@@ -142,5 +141,5 @@ page {
 </style>
 
 <style lang="scss" scoped>
-@import './scss/reserveList.scss';
+@use './scss/reserveList.scss';
 </style>

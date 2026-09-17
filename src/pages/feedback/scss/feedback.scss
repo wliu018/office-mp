@@ -14,7 +14,7 @@
 
 .feedback-title {
   position: relative;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
   &::after {
     content: '';
@@ -27,4 +27,8 @@
     left: -5px;
     top: -3px;
   }
+}
+
+.upload-title {
+  margin-top: 20px;
 }

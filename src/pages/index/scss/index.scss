@@ -24,6 +24,7 @@
   position: relative;
   box-shadow: 0 8px 24px rgba(50, 74, 124, 0.12);
   z-index: 1;
+
   .before {
     position: absolute;
     top: 0;
@@ -37,7 +38,7 @@
 
   .menu-item {
     display: flex;
-    width: 25%;
+    flex: 1 0 25%;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -59,7 +60,7 @@
 }
 
 .menu-wrapper > open-container {
-  width: 25%;
+  flex: 1 0 25%;
 }
 
 .menu-wrapper > open-container .menu-item {
@@ -141,6 +142,32 @@
 
 .content-wrapper {
   background: linear-gradient(180deg, #f4f7ff 0%, #f8f9fa 34%, #f8f9fa 100%);
+}
+
+.home-header {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.home-header-logo {
+  position: absolute;
+  left: 14px;
+  height: 24px;
+  width: auto;
+  transform: translateY(-50%);
+}
+
+.home-header-weather {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  :deep(.weather-card) {
+    justify-content: center;
+    margin: 0;
+  }
 }
 
 .reserve-record-wrapper {

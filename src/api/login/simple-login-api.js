@@ -42,6 +42,10 @@ export const simpleLoginApi = {
     return getRequest(`/admin/booking/company-employees/options`)
   },
 
+  employeeCertificationPage: () => {
+    return postRequest(`/admin/booking/list/1/5`, {})
+  },
+
   isMarketPersonnel: (params) => {
     return getRequest(`/simpleLogin/is-market-personnel/${params.openId}`)
   },

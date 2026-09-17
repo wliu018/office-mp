@@ -2,7 +2,7 @@
   <div style="height: 0;">
     <wd-navbar
       placeholder left-arrow safe-area-inset-top fixed title="领取列表"
-      style="--wot-navbar-background:transparent;--wot-color-border-light:transparent"
+      style="--wot-navbar-bg: transparent"
       @click-left="uni.navigateBack()"
     />
   </div>
@@ -24,7 +24,7 @@
             </wd-cell-group>
           </div>
         </template>
-        <wd-status-tip v-else image="content" tip="暂无内容" />
+        <wd-empty v-else icon="no-content" tip="暂无内容" />
       </view>
     </scroll-view>
   </div>
@@ -33,9 +33,8 @@
 </template>
 
 <script setup>
-import dayjs from 'dayjs'
-import { inject, nextTick, onMounted, reactive, ref } from 'vue'
-import { useToast } from 'wot-design-uni'
+import { useToast } from '@wot-ui/ui'
+import { inject, onMounted, ref } from 'vue'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
 import { useUserStore } from '@/store/user'
@@ -107,5 +106,5 @@ page {
 </style>
 
 <style lang="scss" scoped>
-@import './scss/parkingList.scss';
+@use './scss/parkingList.scss';
 </style>

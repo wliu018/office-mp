@@ -4,7 +4,7 @@
 
 .page-container {
   min-height: 100%;
-  padding: 20px;
+  padding: 10px;
   box-sizing: border-box;
   background: #f8f9fa;
 }
@@ -20,7 +20,6 @@
 .statistics-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   margin-bottom: 12px;
 }
 
@@ -30,10 +29,44 @@
   font-weight: 600;
 }
 
+.statistics-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  margin-left: auto;
+}
+
 :deep(.create-work-order-button) {
   min-width: 118px;
   height: 36px;
   padding: 0 14px;
+}
+
+.create-work-order-shine {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.create-work-order-shine::before {
+  position: absolute;
+  top: 0;
+  left: -120%;
+  z-index: 1;
+  width: 55%;
+  height: 100%;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: skewX(-20deg);
+  animation: create-work-order-shine 5s ease-out 0.5s infinite;
+}
+
+@keyframes create-work-order-shine {
+  14%,
+  100% {
+    left: 120%;
+  }
 }
 
 .create-work-order-button-content {
@@ -102,10 +135,28 @@
   text-align: center;
 }
 
+@keyframes pending-empty-state-fade-in {
+  from {
+    opacity: 0;
+    filter: blur(20px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.pending-empty-state-character {
+  display: inline-block;
+  opacity: 0;
+  animation: pending-empty-state-fade-in 0.5s ease forwards;
+}
+
 .workflow-card {
   margin-bottom: 12px;
   padding: 20px 18px;
-  border: 1px solid #e8e8e8;
+  border: 2px solid #fff;
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
@@ -117,7 +168,7 @@
   justify-content: space-between;
   margin-bottom: 20px;
   color: #303032;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -135,22 +186,43 @@
   min-width: 0;
 }
 
-.card-project-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.workflow-order-number {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff7e6;
+  color: #f5a623;
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.status {
+.card-title-tags {
+  display: flex;
   flex: none;
-  max-width: 120px;
-  padding: 5px 9px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #eef4ff;
-  color: #0055ff;
-  font-size: 12px;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.workflow-card-avatars :deep(.wd-avatar) {
+  box-sizing: border-box;
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+.workflow-card-avatars :deep(.workflow-name-avatar) {
+  background: #fff7e6;
+  color: #f5a623;
+  font-size: 16px;
   font-weight: 600;
+}
+
+.card-project-name {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -193,7 +265,7 @@
 .workflow-progress-track {
   position: relative;
   flex: 1;
-  height: 4px;
+  height: 2px;
   opacity: 0.7;
   overflow: visible;
   border-radius: 999px;
@@ -210,26 +282,9 @@
 .workflow-progress-completed {
   left: 0;
   border-radius: 999px;
-  background: #23c16b;
+  background: linear-gradient(90deg, #4e71ff 0%, #8a59ff 100%);
 }
 
 .workflow-progress-pending {
   display: none;
-}
-
-.workflow-progress-current-anchor {
-  position: absolute;
-  top: 50%;
-  z-index: 2;
-  transform: translate(-50%, -50%);
-}
-
-.workflow-progress-current {
-  display: block;
-  width: 7px;
-  height: 7px;
-  box-sizing: border-box;
-  border: 1px solid #23c16b;
-  border-radius: 50%;
-  background: #f3fbf7;
 }

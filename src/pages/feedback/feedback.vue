@@ -2,7 +2,7 @@
   <div style="height: 0;">
     <wd-navbar
       placeholder left-arrow safe-area-inset-top fixed title="意见反馈"
-      style="--wot-navbar-background:transparent;--wot-color-border-light:transparent"
+      style="--wot-navbar-bg: transparent"
       @click-left="uni.navigateBack()"
     />
   </div>
@@ -12,18 +12,21 @@
       <view
         class="container relative box-border p-[20px]"
       >
-        <wd-form ref="uForm" :model="model">
+        <wd-form ref="uForm" :model="model" :schema="feedbackSchema">
           <div class="feedback-title mb-[10px] text-[15px] text-[#333]">
             意见或建议<span class="text-[#FF0000]">*</span>
           </div>
-          <wd-textarea
-            v-model="model.content"
-            style="box-shadow: 0 5px 10px rgba(0,0,0,0.05); border-radius: 2px; "
-            :maxlength="200"
-            show-word-limit
-            prop="content" clearable placeholder="请输入意见或建议" :rules="[{ required: true, message: '请输入意见或建议' }]"
-          />
-          <div class="feedback-title mb-[10px] mt-[10px] text-[15px] text-[#333]">
+          <wd-form-item prop="content" custom-style="padding: 0; background: transparent;">
+            <wd-textarea
+              v-model="model.content"
+              :compact="false"
+              custom-style="--wot-textarea-bg: #fff; --wot-textarea-padding: 10px; --wot-textarea-inner-font-size: 15px; --wot-textarea-inner-line-height: 24px; box-shadow: 0 5px 10px rgba(0,0,0,0.05); border-radius: 2px;"
+              :maxlength="200"
+              show-word-limit
+              clearable placeholder="随心输入"
+            />
+          </wd-form-item>
+          <div class="feedback-title upload-title mb-[10px] text-[15px] text-[#333]">
             上传图片
           </div>
           <wd-upload
@@ -37,7 +40,7 @@
             @change="handleChange"
           />
           <view class="footer">
-            <wd-button type="primary" size="large" block custom-style="background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%);" @click="submitFeedback">
+            <wd-button type="primary" size="large" round block custom-style="background: linear-gradient(115deg, #3D7DFE 8.4%, #6A59FE 52.29%, #9142FF 93.72%);" @click="submitFeedback">
               提交
             </wd-button>
           </view>
@@ -50,8 +53,8 @@
 </template>
 
 <script setup>
+import { useToast } from '@wot-ui/ui'
 import { inject, reactive, ref } from 'vue'
-import { useToast } from 'wot-design-uni'
 import { othersApi } from '@/api/others-api'
 import loadingBox from '@/components/global-loading-box.vue'
 import { useUserStore } from '@/store/user'
@@ -90,6 +93,13 @@ const model = reactive({
   content: '',
   openId,
 })
+const feedbackSchema = {
+  validate(formModel) {
+    return formModel.content
+      ? []
+      : [{ path: ['content'], message: '请输入意见或建议' }]
+  },
+}
 
 const { success: showSuccess } = useToast()
 
@@ -200,11 +210,12 @@ page {
     linear-gradient(102deg, #f0f6ff 35.5%, #eeebff 78.79%);
 }
 .wd-textarea__count {
-  width: 60px;
+  display: flex;
+  width: 100%;
   justify-content: flex-end;
 }
 </style>
 
 <style lang="scss" scoped>
-@import './scss/feedback.scss';
+@use './scss/feedback.scss';
 </style>

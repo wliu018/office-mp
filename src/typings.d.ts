@@ -1,8 +1,5 @@
 // 全局要用的类型放到这里
 
-// 引入 wot-design-uni 组件库的类型定义
-/// <reference path="./types/wot-design-uni.d.ts" />
-
 declare global {
   interface IResData<T> {
     code: number

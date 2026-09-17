@@ -1,7 +1,7 @@
 <template>
   <wd-navbar
     placeholder left-arrow safe-area-inset-top fixed title="语音助手"
-    style="--wot-navbar-background:transparent;--wot-color-border-light:transparent"
+    style="--wot-navbar-bg: transparent"
     @click-left="uni.navigateBack()"
   />
   <view class="voice-chat-container">
@@ -92,10 +92,10 @@
         custom-style="margin: 20rpx 0;"
       />
       <view class="input-dialog-actions">
-        <wd-button size="small" @click="showInputDialog = false">
+        <wd-button round size="small" @click="showInputDialog = false">
           取消
         </wd-button>
-        <wd-button type="primary" size="small" @click="sendInputText">
+        <wd-button round type="primary" size="small" @click="sendInputText">
           发送
         </wd-button>
       </view>
@@ -104,8 +104,8 @@
 </template>
 
 <script setup>
+import { useToast } from '@wot-ui/ui'
 import { nextTick, onMounted, ref } from 'vue'
-import { useToast } from 'wot-design-uni'
 import { othersApi } from '@/api/others-api'
 import { useUserStore } from '@/store/user'
 
@@ -383,7 +383,7 @@ async function sendInputText() {
 </script>
 
 <style lang="scss" scoped>
-@import './scss/voice-chat.scss';
+@use './scss/voice-chat.scss';
 </style>
 
 <style>

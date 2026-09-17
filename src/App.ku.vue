@@ -33,7 +33,8 @@ defineExpose({
     <view class="hidden text-center">
       {{ helloKuRoot }}，这里可以配置全局的东西
     </view>
-    <wd-message-box custom-class="wd-message-custom-class" />
+    <wd-dialog close-on-click-modal custom-class="wd-dialog-custom-class" />
+    <wd-dialog selector="file-transfer" />
     <wd-toast />
     <KuRootView />
 

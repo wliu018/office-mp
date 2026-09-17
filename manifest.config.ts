@@ -138,7 +138,7 @@ export default defineManifestConfig({
         desc: '用于记录现场维保位置',
       },
     },
-    requiredPrivateInfos: ['getLocation'],
+    requiredPrivateInfos: ['getLocation', 'chooseLocation'],
     // __usePrivacyCheck__: true,
 	// skyline 相关配置
 	lazyCodeLoading: "requiredComponents",
