@@ -74,6 +74,9 @@ export const othersApi = {
   workflowInstanceSubmit: (params) => {
     return postRequest(`/workflow/instance/submit`, params)
   },
+  workflowFormUpdateServiceMode: (instanceId, params) => {
+    return putRequest(`/workflow/form/${instanceId}/service-mode`, params)
+  },
   workflowOnsiteCandidates: () => {
     return getRequest(`/workflow/form/onsite-candidates`)
   },

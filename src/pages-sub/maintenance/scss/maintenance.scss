@@ -292,6 +292,36 @@
   column-gap: 12px;
 }
 
+.work-order-card .service-mode-info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.service-mode-info-row > text:first-child {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  line-height: 32px;
+}
+
+.service-mode-value {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  min-width: 0;
+}
+
+.service-mode-info-row .service-mode-value > text {
+  color: #303032;
+}
+
+.service-mode-edit-button {
+  flex: none;
+}
+
 .work-order-card :deep(.urgency-tag) {
   display: inline-flex;
   align-items: center;
@@ -465,6 +495,10 @@
   background: #37c062;
 }
 
+.history-node-status.is-current {
+  background: #cbd5e1;
+}
+
 .history-node-content {
   min-width: 0;
   flex: 1;
@@ -520,6 +554,10 @@
   font-weight: 600;
   font-size: 13px;
   line-height: 1.2;
+}
+
+.onsite-person-card .section-title {
+  margin-bottom: 0;
 }
 
 .onsite-person-card .person-row {

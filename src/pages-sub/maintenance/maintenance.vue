@@ -56,8 +56,37 @@
           <view class="info-row">
             <text>维护分类</text><text>{{ form.maintenanceCategory || '硬件' }}</text>
           </view>
-          <view class="info-row">
-            <text>服务方式</text><text>{{ isRemoteService ? '远程' : '上门' }}</text>
+          <view class="info-row service-mode-info-row">
+            <text>服务方式</text>
+            <view class="service-mode-value">
+              <wd-radio-group
+                v-if="serviceModeEditing"
+                v-model="serviceModeDraft"
+                size="small"
+                direction="horizontal"
+                type="button"
+              >
+                <wd-radio value="ONSITE" custom-style="--wot-radio-button-margin: 0 8px 0 0;">
+                  上门
+                </wd-radio>
+                <wd-radio value="REMOTE" custom-style="--wot-radio-button-margin: 0;">
+                  远程
+                </wd-radio>
+              </wd-radio-group>
+              <text v-else>{{ isRemoteService ? '远程' : '上门' }}</text>
+              <wd-button
+                v-if="canEditServiceMode"
+                round
+                size="mini"
+                type="info"
+                :icon="serviceModeChanged ? 'check' : 'edit'"
+                :loading="serviceModeSaving"
+                :disabled="serviceModeSaving"
+                custom-class="service-mode-edit-button"
+                custom-style="width: 26px; min-width: 26px; height: 26px; padding: 0; color: #05F;"
+                @click="handleServiceModeButton"
+              />
+            </view>
           </view>
           <view class="field-title">
             故障描述
@@ -317,8 +346,8 @@
             :class="{ 'is-last': index === actionHistoryGroups.length - 1 }"
           >
             <view class="history-node-rail">
-              <view class="history-node-status">
-                <wd-icon name="check" color="#fff" size="14px" />
+              <view class="history-node-status" :class="{ 'is-current': group.isCurrent }">
+                <wd-icon v-if="!group.isCurrent" name="check" color="#fff" size="14px" />
               </view>
             </view>
             <view class="history-node-content">
@@ -569,6 +598,9 @@ const scanning = ref(false)
 const flowStatusVisible = ref(false)
 const stampLoaded = ref(false)
 const initialized = ref(false)
+const serviceModeEditing = ref(false)
+const serviceModeSaving = ref(false)
+const serviceModeDraft = ref('ONSITE')
 const actionHandlerPhones = ref({})
 const location = reactive({ longitude: null, latitude: null, address: '', addressError: '' })
 const runtime = reactive({ instance: null, nodes: [], actionLogs: [], form: {} })
@@ -602,6 +634,10 @@ const archivedSolutionStamp = computed(() => {
 })
 const actionHistoryGroups = computed(() => {
   const actionLogs = runtime.actionLogs || []
+  const currentNodeId = String(runtime.instance?.currentNodeId || '')
+  const currentActionLogId = runtime.instance?.status === 'RUNNING'
+    ? [...actionLogs].reverse().find(log => String(log.nodeId) === currentNodeId)?.id
+    : null
   const actionLogIdFor = (item) => {
     if (item.actionLogId == null)
       return null
@@ -651,6 +687,7 @@ const actionHistoryGroups = computed(() => {
       createTime: log.createTime,
       roundNo: log.roundNo,
       remark: log.remark,
+      isCurrent: currentActionLogId != null && String(log.id) === String(currentActionLogId),
       files: normalizeFiles(actionFiles),
       solutionResults: actionSolutions.map((item, solutionIndex) => ({
         ...item,
@@ -690,6 +727,19 @@ const attachmentLabel = computed(() => currentNodeCode.value === 'ONSITE_ARRIVE'
   : '照片/视频')
 const canEdit = computed(() => runtime.instance?.status === 'RUNNING'
   && Number(runtime.instance?.currentHandlerUserId) === Number(currentUserId.value))
+const latestOwnerAssignLog = computed(() => [...(runtime.actionLogs || [])]
+  .reverse()
+  .find(item => item.nodeType === 'OWNER_ASSIGN'))
+const latestRecallLog = computed(() => [...(runtime.actionLogs || [])]
+  .reverse()
+  .find(item => item.actionType === 'RECALL'))
+const canEditServiceMode = computed(() => runtime.instance?.status === 'RUNNING'
+  && currentNodeCode.value !== 'OWNER_ASSIGN'
+  && latestOwnerAssignLog.value
+  && (!latestRecallLog.value || Number(latestOwnerAssignLog.value.id) > Number(latestRecallLog.value.id))
+  && Number(latestOwnerAssignLog.value.handlerUserId) === Number(currentUserId.value))
+const serviceModeChanged = computed(() => serviceModeEditing.value
+  && serviceModeDraft.value !== (form.value.serviceMode || 'ONSITE'))
 const creatorUserId = computed(() => {
   return (runtime.actionLogs || []).find(item => item.actionType === 'START')?.handlerUserId
 })
@@ -944,6 +994,8 @@ async function initDetail() {
   actionForm.solutionRemark = ''
   actionForm.maintenanceCategory = detailForm.value.form?.maintenanceCategory || maintenancePreferences.maintenanceCategory || '硬件'
   actionForm.serviceMode = detailForm.value.form?.serviceMode || 'ONSITE'
+  serviceModeDraft.value = actionForm.serviceMode
+  serviceModeEditing.value = false
   const current = currentNode.value
   if (current?.nodeId) {
     if (currentNodeCode.value === 'CREATE' || currentNodeCode.value === 'OWNER_ASSIGN') {
@@ -1196,6 +1248,34 @@ async function submitAction(actionType) {
   finally {
     if (!submitted)
       submitting.value = false
+  }
+}
+
+async function handleServiceModeButton() {
+  if (!serviceModeEditing.value) {
+    serviceModeDraft.value = form.value.serviceMode || 'ONSITE'
+    serviceModeEditing.value = true
+    return
+  }
+  if (!serviceModeChanged.value) {
+    serviceModeEditing.value = false
+    return
+  }
+  serviceModeSaving.value = true
+  try {
+    await othersApi.workflowFormUpdateServiceMode(instanceId.value, { serviceMode: serviceModeDraft.value })
+    form.value.serviceMode = serviceModeDraft.value
+    actionForm.serviceMode = serviceModeDraft.value
+    serviceModeEditing.value = false
+    toast.success({ msg: '服务方式已保存' })
+  }
+  catch (error) {
+    serviceModeDraft.value = form.value.serviceMode || 'ONSITE'
+    serviceModeEditing.value = false
+    toast.error({ msg: error?.message || '服务方式保存失败' })
+  }
+  finally {
+    serviceModeSaving.value = false
   }
 }
 
